@@ -1,13 +1,19 @@
-# config.py
 
-# Percorsi dei dati
-ROOT_CONTROLATERALS = "C:/Users/39333/OneDrive/Desktop/FUORIVENA 5x1000/controlaterals"
-ROOT_INJECTIONS = "C:/Users/39333/OneDrive/Desktop/FUORIVENA 5x1000/injections"
-PATH_GRAFICI = "C:/Users/39333/OneDrive/Desktop/FUORIVENA 5x1000/grafici"
+import os
+
+# Ottieni la directory corrente del file config.py
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Percorsi relativi alle directory controlaterals e injections
+ROOT_CONTROLATERALS = os.path.join(BASE_DIR, "../controlaterals")
+ROOT_INJECTIONS = os.path.join(BASE_DIR, "../injections")
+
+# Percorso per salvare i grafici
+PATH_GRAFICI = os.path.join(BASE_DIR, "../grafici")
 
 # Parametri CSV
-SEPARATOR = ";"
-ENCODING = "ISO-8859-1"
+SEPARATOR = ","
+ENCODING = "utf-8"
 
 # Colonne di interesse
 COLUMNS_INJECTION = {
@@ -19,3 +25,4 @@ COLUMNS_CONTROLATERAL = {
     'time': 'Timestamp',
     'value': 'Intensità di dose (μSv/h)'
 }
+
