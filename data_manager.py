@@ -5,11 +5,10 @@ Created on Thu Jan 16 16:10:43 2025
 @author: nicop
 """
 
+from datetime import timedelta
 import os
 import pandas as pd
 import numpy as np
-from datetime import timedelta
-
 
 class DataManager:
     def __init__(self, root_injections, root_controlaterals):
@@ -18,30 +17,46 @@ class DataManager:
 
     def get_file_names_and_activities(self):
         """
-        Trova i file corrispondenti nelle due directory e ottiene i nomi e le attività.
+        Trova i file corrispondenti nelle due directory e ottiene i nomi base.
+        Restituisce solo i file per cui esistono sia iniezione che controlaterale.
         """
-        names, activities = [], []
+        names = []
         for file_1 in os.listdir(self.root_injections):
-            for file_2 in os.listdir(self.root_controlaterals):
-                file_2 = file_2.split('_contr')[0] + '.csv'
-                if file_1 == file_2:
-                    name, suffix = file_1.split('-')
-                    activity = int(suffix.split('MBq')[0])
+            if file_1.endswith('_inj.csv'):  # Cerca solo i file di iniezione
+                # Rimuove il suffisso '_inj.csv' per ottenere il nome base
+                name = file_1.replace('_inj.csv', '')
+                
+                # Verifica se esiste il file controlaterale corrispondente
+                expected_controlateral = f"{name}_cont.csv"
+                if expected_controlateral in os.listdir(self.root_controlaterals):
                     names.append(name)
-                    activities.append(activity)
-        return names, activities
+                else:
+                    print(f"File controlaterale mancante per: {name}")
+        return names
 
-    def load_and_clean_data(self, path, time_column, value_column, sep=",", encoding="utf-8"):
+    def load_and_clean_data(self, path, columns, sep=",", encoding="utf-8"):
         """
         Carica e pulisce i dati da un file CSV.
+        :param path: Percorso del file CSV.
+        :param columns: Dizionario di colonne da elaborare.
+        :param sep: Separatore del file CSV.
+        :param encoding: Encoding del file.
+        :return: DataFrame processato con le colonne selezionate.
         """
         try:
+            # Carica il file CSV
             data = pd.read_csv(path, sep=sep, encoding=encoding)
-            data[time_column] = pd.to_datetime(data[time_column], format='%d/%m/%Y %H:%M')
-            data.set_index(time_column, drop=True, inplace=True)
-            if value_column in data.columns:
-                data[value_column] = data[value_column].str.replace(',', '.').astype(float)
-            return data[[value_column]].dropna()
+            
+            # Conversione della colonna temporale
+            data[columns['time']] = pd.to_datetime(data[columns['time']], format='%d/%m/%Y %H:%M')
+            data.set_index(columns['time'], drop=True, inplace=True)
+            
+            # Conversione delle colonne numeriche
+            for key, col in columns.items():
+                if key != 'time' and col in data.columns:
+                    data[col] = data[col].str.replace(',', '.').astype(float)
+            
+            return data[list(columns.values())].dropna()
         except Exception as e:
             print(f"Errore durante il caricamento del file {path}: {e}")
             return None
