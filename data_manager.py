@@ -145,3 +145,45 @@ class DataManager:
     
         # Restituiamo i DF con gli indici aggiornati
         return df_inj, df_con
+    
+    def align_with_injection_reference(self, df_inj, df_con, total_minutes=15):
+     """
+     1. Prende come riferimento t=0 il primo timestamp di df_inj.
+     2. Crea un range di tempo di `total_minutes` minuti a freq 1 secondo.
+     3. Allinea df_inj e df_con su questa griglia (interpolando).
+     4. Aggiunge la colonna 'time_seconds' e la colonna 'original_timestamp'.
+     5. Resetta l'indice una volta sola.
+     Ritorna (df_inj_aligned, df_con_aligned).
+     """
+     if df_inj.empty or df_con.empty:
+         return df_inj, df_con
+ 
+     # 1) Istante di inizio injection
+     inj_start_time = df_inj.index[0]
+     # 2) Fine -> start + total_minutes
+     inj_end_time = inj_start_time + pd.Timedelta(minutes=total_minutes)
+ 
+     # 3) Creiamo un DatetimeIndex regolare (freq=1S)
+     time_range = pd.date_range(start=inj_start_time, end=inj_end_time, freq='1S')
+ 
+     # 4) Tagliamo i DF [inj_start_time, inj_end_time]
+     df_inj_cut = df_inj.loc[(df_inj.index >= inj_start_time) & (df_inj.index <= inj_end_time)].copy()
+     df_con_cut = df_con.loc[(df_con.index >= inj_start_time) & (df_con.index <= inj_end_time)].copy()
+ 
+     # 5) Reindex su time_range + interpolazione
+     df_inj_aligned = df_inj_cut.reindex(time_range).interpolate(method='time')
+     df_con_aligned = df_con_cut.reindex(time_range).interpolate(method='time')
+ 
+     # 6) Crea colonna 'original_timestamp' e 'time_seconds' 
+     #    PRIMA di fare reset_index (qui l'indice è DateTimeIndex).
+     df_inj_aligned['original_timestamp'] = df_inj_aligned.index
+     df_inj_aligned['time_seconds'] = (df_inj_aligned.index - inj_start_time).total_seconds()
+     
+     df_con_aligned['original_timestamp'] = df_con_aligned.index
+     df_con_aligned['time_seconds'] = (df_con_aligned.index - inj_start_time).total_seconds()
+ 
+     # 7) Ora facciamo reset_index UNA volta
+     df_inj_aligned.reset_index(drop=True, inplace=True)
+     df_con_aligned.reset_index(drop=True, inplace=True)
+ 
+     return df_inj_aligned, df_con_aligned
