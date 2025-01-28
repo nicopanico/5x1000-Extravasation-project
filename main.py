@@ -58,7 +58,7 @@ def main():
             df_con=df_con,
             output_dir=PATH_GRAFICI,
             yscale='log',
-            dose_column='Dose (μSv)',
+            dose_column='Intensità di dose (μSv/h)',
             time_column='time_seconds'
         )
         
