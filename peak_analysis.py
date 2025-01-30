@@ -11,7 +11,11 @@ import pandas as pd
 import numpy as np
 from scipy.ndimage import gaussian_filter1d
 
+<<<<<<< HEAD
 def find_peak(df_inj, column_for_peak='Intensità di dose (μSv/h)', time_column="time_seconds"):
+=======
+def find_peak(df_inj, column_for_peak="Dose (μSv)", time_column="time_seconds"):
+>>>>>>> 061f2a496b6239b27585dc7857cfd702fb514e7c
     """
     Trova l'indice del picco nella colonna `column_for_peak` di df_inj 
     Ritorna (peak_idx, peak_time_s, peak_value).
@@ -45,7 +49,11 @@ def apply_gaussian_filter_to_column(df, column, sigma=5):
     df[column] = gaussian_filter1d(df[column], sigma=sigma)
     return df
 
+<<<<<<< HEAD
 def compute_stats(df_inj, df_con, column_for_peak='Intensità di dose (μSv/h)'):
+=======
+def compute_stats(df_inj, df_con, column_for_peak="Dose (μSv)"):
+>>>>>>> 061f2a496b6239b27585dc7857cfd702fb514e7c
     """
     Esempio di funzioni di calcolo statistiche sull'intervallo (df_inj, df_con).
     Ritorna un dict con 'mean_inj', 'mean_con', ecc.
@@ -68,6 +76,7 @@ def compute_stats(df_inj, df_con, column_for_peak='Intensità di dose (μSv/h)')
     return stats
 
 def analyze_peak(
+<<<<<<< HEAD
     df_inj: pd.DataFrame,
     df_con: pd.DataFrame,
     column_for_peak: str = "Intensità di dose (μSv/h)",
@@ -152,3 +161,41 @@ def analyze_peak(
     }
 
     return df_inj_filtered, df_con_filtered, stats
+=======
+    df_inj,
+    df_con,
+    column_for_peak="Dose (μSv)",
+    time_column="time_seconds",
+    margin_before=60,
+    margin_after=540,
+    apply_filter=False,
+    filter_sigma=5
+):
+    """
+    Funzione che orchestra i passi:
+    1) trova il picco in df_inj[column_for_peak]
+    2) definisce start_time = peak_time_s - margin_before, end_time = peak_time_s + margin_after
+    3) slice i due DF
+    4) opzionalmente filtra la colonna
+    5) calcola statistiche e restituisce (df_inj_slice, df_con_slice, stats)
+    """
+    peak_idx, peak_time_s, peak_val = find_peak(df_inj, column_for_peak, time_column)
+    if peak_time_s is None:
+        # df_inj era vuoto
+        return df_inj, df_con, {}
+
+    start_time = peak_time_s - margin_before
+    end_time = peak_time_s + margin_after
+
+    df_inj_slice = slice_data(df_inj, time_column, start_time, end_time)
+    df_con_slice = slice_data(df_con, time_column, start_time, end_time)
+
+    if apply_filter:
+        df_inj_slice = apply_gaussian_filter_to_column(df_inj_slice, column_for_peak, sigma=filter_sigma)
+        df_con_slice = apply_gaussian_filter_to_column(df_con_slice, column_for_peak, sigma=filter_sigma)
+
+    stats = compute_stats(df_inj_slice, df_con_slice, column_for_peak)
+    # puoi aggiungere altre statistiche, integrali, etc.
+
+    return df_inj_slice, df_con_slice, stats
+>>>>>>> 061f2a496b6239b27585dc7857cfd702fb514e7c
