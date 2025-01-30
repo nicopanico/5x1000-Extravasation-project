@@ -9,7 +9,7 @@ ROOT_CONTROLATERALS = os.path.join(BASE_DIR, "controlaterals")
 ROOT_INJECTIONS = os.path.join(BASE_DIR, "injections")
 PATH_GRAFICI = os.path.join(BASE_DIR, "grafici")
 ROOT_STRAVASO = os.path.join(BASE_DIR, "stravaso")
-
+PATH_STRAVASO_PLOTS = os.path.join(ROOT_STRAVASO, "stravaso_plots")
 # Parametri CSV
 SEPARATOR = ","
 ENCODING = "utf-8"
