@@ -4,12 +4,11 @@ import os
 # Ottieni la directory base del progetto
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Percorsi relativi alle directory controlaterals e injections
+# Percorsi relativi alle directory controlaterals, injections e stravaso
 ROOT_CONTROLATERALS = os.path.join(BASE_DIR, "controlaterals")
 ROOT_INJECTIONS = os.path.join(BASE_DIR, "injections")
-
-# Percorso per i grafici
 PATH_GRAFICI = os.path.join(BASE_DIR, "grafici")
+ROOT_STRAVASO = os.path.join(BASE_DIR, "stravaso")
 
 # Parametri CSV
 SEPARATOR = ","

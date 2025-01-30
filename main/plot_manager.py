@@ -64,7 +64,6 @@ def plot_injection_controlateral(
     plt.close(fig)
 
     print(f"Plot salvato in: {plot_path}")
-<<<<<<< HEAD
 
 
 
@@ -100,5 +99,3 @@ def plot_comparison_raw_filtered(
     os.makedirs(output_dir, exist_ok=True)
     plt.savefig(os.path.join(output_dir, f"plot_{base_name}_comparison_raw_filtered.png"))
     plt.close(fig)
-=======
->>>>>>> 061f2a496b6239b27585dc7857cfd702fb514e7c
