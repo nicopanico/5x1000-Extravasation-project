@@ -4,19 +4,25 @@ Created on Thu Jan 30 15:21:33 2025
 
 @author: panicon
 """
+import os, sys
+# 1) Ricava la cartella dove si trova lo script attuale
+script_dir = os.path.dirname(os.path.abspath(__file__))
 
-# old_dosimeter_analysis.py (dentro code/utility_and_extra_analysis/)
+# 2) Sali di un livello per arrivare a "code/" (modifica quanti os.path.dirname(...) ti servono)
+code_dir = os.path.dirname(script_dir)  
 
-
+# 3) Inserisci code/ in sys.path
+if code_dir not in sys.path:
+    sys.path.insert(0, code_dir)
     
-import os    
+   
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter1d
 
 # Importiamo i path dal config
-from ..main.config import ROOT_STRAVASO , PATH_STRAVASO_PLOTS
+from main.config import ROOT_STRAVASO , PATH_STRAVASO_PLOTS
 
 class OldDataManager:
     def __init__(
