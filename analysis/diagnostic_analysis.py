@@ -10,6 +10,8 @@ from analysis.base_analysis import BaseAnalysis
 from peak_analysis import analyze_peak  # Se possibile, puoi riutilizzare la funzione oppure crearne una versione specifica
 from delta_analysis import compute_delta_timepoints
 from plot_manager import plot_injection_controlateral
+from additional_metrics import compute_additional_metrics  # Assicurati che il percorso sia corretto
+
 
 class DiagnosticAnalysis(BaseAnalysis):
     def get_injection_columns(self):
@@ -63,6 +65,7 @@ class DiagnosticAnalysis(BaseAnalysis):
         stats["ratio_dose"] = ratio_dose
 
         # Eventuali ulteriori metriche possono essere aggiunte qui
+        stats = compute_additional_metrics(df_inj_filtered, stats, time_column="time_seconds", dose_column="dose_rate")
 
         return df_inj_filtered, df_con_filtered, stats
 

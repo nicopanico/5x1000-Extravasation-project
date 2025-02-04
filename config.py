@@ -49,7 +49,7 @@ COLUMNS_CONTROLATERAL_DIAGNOSTIC = {
 }
 
 # Modalità di analisi: "therapy" o "diagnostic"
-ANALYSIS_MODE = "therapy"  # Cambia in "diagnostic" se vuoi analizzare dati diagnostici
+ANALYSIS_MODE = "diagnostic"  # Cambia in "diagnostic" se vuoi analizzare dati diagnostici
 
 
 
