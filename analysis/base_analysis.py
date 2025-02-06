@@ -67,5 +67,4 @@ class BaseAnalysis(ABC):
             all_stats.append(stats)
             # Plot dei risultati
             self.plot_results(base_name, df_inj_sync, df_con_sync, df_inj_filtered, df_con_filtered)
-        # Salva tutti i risultati (ad es. in un file Excel)
-        # ...
+       

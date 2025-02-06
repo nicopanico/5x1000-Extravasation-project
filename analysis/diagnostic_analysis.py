@@ -7,11 +7,10 @@ Created on Tue Feb  4 09:26:59 2025
 
 # analysis/diagnostic_analysis.py
 from analysis.base_analysis import BaseAnalysis
-from peak_analysis import analyze_peak  # Se possibile, puoi riutilizzare la funzione oppure crearne una versione specifica
+from peak_analysis import analyze_peak  
 from delta_analysis import compute_delta_timepoints
 from plot_manager import plot_injection_controlateral
-from additional_metrics import compute_additional_metrics  # Assicurati che il percorso sia corretto
-
+from additional_metrics import compute_additional_metrics  
 
 class DiagnosticAnalysis(BaseAnalysis):
     def get_injection_columns(self):
@@ -21,6 +20,14 @@ class DiagnosticAnalysis(BaseAnalysis):
     def get_controlateral_columns(self):
         from config import COLUMNS_CONTROLATERAL_DIAGNOSTIC
         return COLUMNS_CONTROLATERAL_DIAGNOSTIC
+
+    def load_data(self, inj_path, con_path):
+        """
+        Carica e pulisce i dati dai file specificati utilizzando i dizionari delle colonne di interesse.
+        """
+        df_inj = self.data_manager.load_and_clean_data(inj_path, self.get_injection_columns())
+        df_con = self.data_manager.load_and_clean_data(con_path, self.get_controlateral_columns())
+        return df_inj, df_con
 
     def synchronize_and_align(self, df_inj, df_con, base_name):
         # Riutilizziamo le regole di sincronizzazione già presenti nel DataManager
@@ -35,7 +42,7 @@ class DiagnosticAnalysis(BaseAnalysis):
         Usiamo la funzione analyze_peak, adattando i parametri:
           - column_for_peak: 'dose_rate'
           - time_column: 'time_seconds'
-          - possiamo usare un filtro con sigma minore (ad esempio 3.0)
+          - filtro con sigma minore (ad esempio 3.0)
           - plateau_fraction leggermente diversa (ad esempio 0.85)
         Inoltre, aggiungiamo le metriche extra:
           - delta_dose: differenza fra il picco e la media (plateau)
@@ -51,7 +58,6 @@ class DiagnosticAnalysis(BaseAnalysis):
         )
 
         # Aggiungiamo le metriche extra
-        # Assumiamo che stats contenga "peak_inj_value" e "mean_inj_filtered"
         peak_value = stats.get("peak_inj_value")
         mean_value = stats.get("mean_inj_filtered")
         if peak_value is not None and mean_value is not None:
@@ -64,9 +70,8 @@ class DiagnosticAnalysis(BaseAnalysis):
         stats["delta_dose"] = delta_dose
         stats["ratio_dose"] = ratio_dose
 
-        # Eventuali ulteriori metriche possono essere aggiunte qui
+        # Richiama la funzione per calcolare metriche aggiuntive
         stats = compute_additional_metrics(df_inj_filtered, stats, time_column="time_seconds", dose_column="dose_rate")
-
         return df_inj_filtered, df_con_filtered, stats
 
     def plot_results(self, base_name, df_inj, df_con, df_inj_filtered, df_con_filtered):
@@ -91,4 +96,5 @@ class DiagnosticAnalysis(BaseAnalysis):
             dose_column='dose_rate',
             time_column='time_seconds'
         )
+
 

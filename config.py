@@ -4,15 +4,16 @@ import os
 
 THIS_FILE = os.path.abspath(__file__)
 MAIN_DIR = os.path.dirname(THIS_FILE)
-CODE_DIR = os.path.dirname(MAIN_DIR)
-PROJECT_DIR = os.path.dirname(CODE_DIR)
 
-# Per la terapia (già definite)
+# la directory del progetto è il genitore della cartella "code".
+PROJECT_DIR = os.path.dirname(MAIN_DIR)
+
+# Percorsi per la terapia
 ROOT_INJECTIONS_THERAPY = os.path.join(PROJECT_DIR, "injections")
 ROOT_CONTROLATERALS_THERAPY = os.path.join(PROJECT_DIR, "controlaterals")
 PATH_GRAFICI_THERAPY = os.path.join(PROJECT_DIR, "grafici")
 
-# Per la diagnostica (file acquisiti da "stravaso_processed")
+# Percorsi per la diagnostica
 ROOT_INJECTIONS_DIAGNOSTIC = os.path.join(PROJECT_DIR, "stravaso_processed", "injections")
 ROOT_CONTROLATERALS_DIAGNOSTIC = os.path.join(PROJECT_DIR, "stravaso_processed", "controlaterals")
 PATH_GRAFICI_DIAGNOSTIC = os.path.join(PROJECT_DIR, "stravaso_processed", "grafici")
@@ -37,14 +38,13 @@ COLUMNS_CONTROLATERAL_THERAPY = {
 }
 
 # Colonne di interesse per la diagnostica  
-# (attualmente i file hanno "Timestamp" per il tempo e "dose_rate" per il valore)
 COLUMNS_INJECTION_DIAGNOSTIC = {
-    'time': 'Timestamp',
+    'time': 'timestamp',
     'dose_rate': 'dose_rate'
 }
 
 COLUMNS_CONTROLATERAL_DIAGNOSTIC = {
-    'time': 'Timestamp',
+    'time': 'timestamp',
     'dose_rate': 'dose_rate'
 }
 
