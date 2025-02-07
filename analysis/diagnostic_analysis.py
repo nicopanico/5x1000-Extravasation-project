@@ -77,15 +77,15 @@ class DiagnosticAnalysis(BaseAnalysis):
     def plot_results(self, base_name, df_inj, df_con, df_inj_filtered, df_con_filtered):
         from config import PATH_GRAFICI_DIAGNOSTIC
         # Plot dei dati originali
-        plot_injection_controlateral(
-            base_name=base_name,
-            df_inj=df_inj,
-            df_con=df_con,
-            output_dir=PATH_GRAFICI_DIAGNOSTIC,
-            yscale='log',
-            dose_column='dose_rate',      # Usato per diagnostica
-            time_column='time_seconds'
-        )
+        # plot_injection_controlateral(
+        #     base_name=base_name,
+        #     df_inj=df_inj,
+        #     df_con=df_con,
+        #     output_dir=PATH_GRAFICI_DIAGNOSTIC,
+        #     yscale='log',
+        #     dose_column='dose_rate',      # Usato per diagnostica
+        #     time_column='time_seconds'
+        # )
         # Plot dei dati filtrati
         plot_injection_controlateral(
             base_name=f"{base_name}_filtered",

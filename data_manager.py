@@ -51,6 +51,14 @@ class DataManager:
             df_raw = pd.read_csv(path, sep=sep, encoding=encoding, decimal=",")
             # Rimuove spazi extra nei nomi delle colonne
             df_raw.columns = df_raw.columns.str.strip()
+            
+            # Se l'analisi è in modalità diagnostica, trasforma i nomi delle colonne in minuscolo
+            from config import ANALYSIS_MODE
+            if ANALYSIS_MODE.lower() == "diagnostic":
+                df_raw.columns = df_raw.columns.str.lower()
+            else:
+                df_raw.columns = df_raw.columns.str.strip()
+            
             # Se ci sono colonne duplicate, mantieni la prima
             if df_raw.columns.duplicated().any():
                 df_raw = df_raw.loc[:, ~df_raw.columns.duplicated(keep='first')]

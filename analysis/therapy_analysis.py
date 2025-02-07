@@ -38,15 +38,15 @@ class TherapyAnalysis(BaseAnalysis):
 
     def plot_results(self, base_name, df_inj, df_con, df_inj_filtered, df_con_filtered):
         from config import PATH_GRAFICI_THERAPY
-        plot_injection_controlateral(
-            base_name=base_name,
-            df_inj=df_inj,
-            df_con=df_con,
-            output_dir=PATH_GRAFICI_THERAPY,
-            yscale='log',
-            dose_column='Intensità di dose (μSv/h)',
-            time_column='time_seconds'
-        )
+        # plot_injection_controlateral(
+        #     base_name=base_name,
+        #     df_inj=df_inj,
+        #     df_con=df_con,
+        #     output_dir=PATH_GRAFICI_THERAPY,
+        #     yscale='log',
+        #     dose_column='Intensità di dose (μSv/h)',
+        #     time_column='time_seconds'
+        # )
         plot_injection_controlateral(
             base_name=f"{base_name}_filtered",
             df_inj=df_inj_filtered,

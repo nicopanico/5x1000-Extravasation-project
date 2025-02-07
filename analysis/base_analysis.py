@@ -49,6 +49,7 @@ class BaseAnalysis(ABC):
         # Esempio: ottieni i nomi base comuni (questo metodo potrebbe appartenere al DataManager)
         names = self.data_manager.get_file_names()
         all_stats = []  # lista di dizionari con statistiche
+        skipped = []  # Lista per tenere traccia dei file/pazienti saltati
         # ciclo sui file
         for base_name in names:
             print(f"Processo: {base_name}")
@@ -58,9 +59,15 @@ class BaseAnalysis(ABC):
             df_con = self.data_manager.load_and_clean_data(con_path, self.get_controlateral_columns())
             if df_inj.empty or df_con.empty:
                 print(f"Attenzione: {base_name} - uno dei DataFrame è vuoto. Skip.")
+                skipped.append(base_name)
                 continue
             # Sincronizza e allinea
             df_inj_sync, df_con_sync = self.synchronize_and_align(df_inj, df_con, base_name)
+            
+            if df_inj_sync.empty or df_con_sync.empty:
+                print(f"Attenzione: {base_name} - la sincronizzazione ha restituito DataFrame vuoti. Skip.")
+                skipped.append(base_name)
+                continue
             # Analizza il picco (ed eventualmente filtra)
             df_inj_filtered, df_con_filtered, stats = self.analyze_peak(df_inj_sync, df_con_sync)
             stats["base_name"] = base_name
@@ -68,3 +75,11 @@ class BaseAnalysis(ABC):
             # Plot dei risultati
             self.plot_results(base_name, df_inj_sync, df_con_sync, df_inj_filtered, df_con_filtered)
        
+        if skipped:
+            print("I seguenti pazienti sono stati saltati:")
+            for name in skipped:
+                print(name)
+       
+        
+
+        
