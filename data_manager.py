@@ -44,7 +44,6 @@ class DataManager:
 
         return sorted(list(common_bases))
     
-    ## 2__
     def load_and_clean_data(self, path, columns_of_interest=None, sep=",", encoding="utf-8"):
         try:
             # Legge il CSV usando decimal="," per interpretare correttamente i numeri
@@ -59,7 +58,7 @@ class DataManager:
             else:
                 df_raw.columns = df_raw.columns.str.strip()
             
-            # Se ci sono colonne duplicate, mantieni la prima
+            # Rimuove eventuali colonne duplicate
             if df_raw.columns.duplicated().any():
                 df_raw = df_raw.loc[:, ~df_raw.columns.duplicated(keep='first')]
             
@@ -88,10 +87,9 @@ class DataManager:
                                                   format="%d/%m/%Y %H:%M:%S",
                                                   dayfirst=True,
                                                   errors="coerce")
-                # Imposta la colonna del tempo come indice **ma la mantiene anche come colonna**
+                # Imposta la colonna del tempo come indice (ma la mantiene anche come colonna)
                 df_raw.set_index(time_col, drop=False, inplace=True)
                 df_raw.sort_index(ascending=True, inplace=True)
-                # Rimuove eventuali duplicati nell'indice
                 df_raw = df_raw[~df_raw.index.duplicated(keep='first')]
             else:
                 if "Timestamp" in df_raw.columns:
@@ -103,25 +101,23 @@ class DataManager:
                     df_raw.sort_index(ascending=True, inplace=True)
                     df_raw = df_raw[~df_raw.index.duplicated(keep='first')]
             
-            # Debug: stampa il DataFrame dopo la conversione dell'indice
-            # print("DataFrame dopo la conversione dell'indice:")
-            # if "dose_rate" in df_raw.columns:
-            #     print(df_raw["dose_rate"].head())
-            # print("Tipi di dato:")
-            # print(df_raw.dtypes)
-            
             # Estrazione delle colonne di interesse
             if columns_of_interest:
-                # Costruisci un DataFrame che contenga le colonne desiderate.
-                # In questo esempio, vogliamo avere "time" (ottenuto dal valore dell'indice, ora presente come colonna)
-                # e "dose_rate".
-                df_clean = df_raw.copy()[[columns_of_interest["time"], columns_of_interest.get("dose_rate", "dose_rate")]]
-                # Rinomina la colonna del tempo in "time" (se non lo è già)
+                # Costruisci la lista delle colonne da estrarre: includi sempre quella del tempo e tutte le altre specificate
+                cols_to_extract = [columns_of_interest["time"]] + [col for key, col in columns_of_interest.items() if key != "time"]
+                df_clean = df_raw.copy()[cols_to_extract]
+                # Rinomina la colonna del tempo in "time"
                 df_clean.rename(columns={columns_of_interest["time"]: "time"}, inplace=True)
-                # Se vuoi assicurarti che la colonna "time" contenga i valori dal DataFrame (non l'indice)
-                # Puoi anche usare: df_clean["time"] = df_clean["time"].values
-                # Applica dropna solo su "dose_rate" (o su quelle colonne essenziali)
-                df_clean.dropna(subset=["dose_rate"], inplace=True)
+                
+                # Definisci la colonna "essenziale" per il drop delle righe con valori mancanti.
+                if ANALYSIS_MODE.lower() == "diagnostic":
+                    essential = columns_of_interest.get("dose_rate", "dose_rate")
+                else:
+                    # Per terapia, ad esempio, usa "intensity"
+                    essential = columns_of_interest.get("intensity", "Intensità di dose (μSv/h)")
+                
+                if essential in df_clean.columns:
+                    df_clean.dropna(subset=[essential], inplace=True)
                 return df_clean
             else:
                 df_raw.dropna(how="any", inplace=True)
@@ -130,7 +126,6 @@ class DataManager:
         except Exception as e:
             print(f"Errore durante il caricamento di {path}: {e}")
             return pd.DataFrame()
-
         
     #3__       
     def synchronize_data(self, df_inj: pd.DataFrame, df_con: pd.DataFrame, base_name: str):

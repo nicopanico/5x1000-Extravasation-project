@@ -9,6 +9,8 @@ Created on Mon Jan 27 16:53:28 2025
 
 import os
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
 def plot_injection_controlateral(
     base_name,
@@ -17,53 +19,65 @@ def plot_injection_controlateral(
     output_dir,
     yscale='log',
     dose_column='Dose (μSv)',
-    time_column='time_seconds'
+    time_column='time_seconds',
+    stats=None,       # Statistiche generali
+    ratio_stats=None  # Statistiche ratio
 ):
-    """
-    Esegue un plot di df_inj e df_con (Dose vs time).
-    :param base_name: Nome del caso, usato per salvare il file.
-    :param df_inj: DataFrame injection (deve contenere time_column e dose_column).
-    :param df_con: DataFrame controlateral (idem).
-    :param output_dir: cartella in cui salvare il plot (es. 'grafici').
-    :param yscale: 'linear' o 'log' per la scala y.
-    :param dose_column: nome della colonna che contiene la dose (default 'Dose (μSv)').
-    :param time_column: nome della colonna per il tempo (default 'time_seconds').
-    """
+    fig, ax = plt.subplots(figsize=(10,6))
 
-    # Se le colonne non esistono nel DataFrame, avvisa e ritorna
-    if time_column not in df_inj.columns or dose_column not in df_inj.columns:
-        print(f"Attenzione: df_inj non contiene {time_column} o {dose_column}")
-        return
-    if time_column not in df_con.columns or dose_column not in df_con.columns:
-        print(f"Attenzione: df_con non contiene {time_column} o {dose_column}")
-        return
-
-    # Crea la figura
-    fig, ax = plt.subplots(figsize=(10, 6))
-
-    # Plot injection
     ax.plot(df_inj[time_column], df_inj[dose_column], label='Injection', color='orange')
-
-    # Plot controlateral
     ax.plot(df_con[time_column], df_con[dose_column], label='Controlateral', color='blue', linestyle='--')
 
-    # Impostazioni assi
+    ax.set_yscale(yscale)
     ax.set_xlabel("Time [s]", fontsize=14)
     ax.set_ylabel(dose_column, fontsize=14)
-    ax.set_yscale(yscale)
-    ax.legend(fontsize=12)
+    ax.set_title(f"Confronto Injection vs Controlateral - {base_name}", fontsize=16)
+    ax.legend()
     ax.grid(True)
 
-    # Titolo (se vuoi)
-    ax.set_title(f"Confronto Injection vs Controlateral - {base_name}", fontsize=16)
+    # Annotazioni dalle statistiche generali (es. t_90 e slope)
+    if stats is not None:
+        # Annotazione per t_90 dell'injection
+        t_90_inj = stats.get("time_to_90pct_inj", None)
+        if t_90_inj is not None and not pd.isna(t_90_inj):
+            idx_inj = (df_inj[time_column] - t_90_inj).abs().idxmin()
+            y_val_inj = df_inj.loc[idx_inj, dose_column]
+            ax.axvline(x=t_90_inj, color='red', linestyle='--', alpha=0.7, label='t_90_inj')
+            ax.scatter(t_90_inj, y_val_inj, color='red', marker='x')
+            ax.text(t_90_inj, y_val_inj, f"t_90_inj={t_90_inj:.0f}s", color='red', fontsize=9, ha='left')
 
-    # Salvataggio
+        # Annotazione per t_90 della controlateral
+        t_90_con = stats.get("time_to_90pct_con", None)
+        if t_90_con is not None and not pd.isna(t_90_con):
+            idx_con = (df_con[time_column] - t_90_con).abs().idxmin()
+            y_val_con = df_con.loc[idx_con, dose_column]
+            ax.axvline(x=t_90_con, color='green', linestyle='--', alpha=0.7, label='t_90_con')
+            ax.scatter(t_90_con, y_val_con, color='green', marker='o')
+            ax.text(t_90_con, y_val_con, f"t_90_con={t_90_con:.0f}s", color='green', fontsize=9, ha='left')
+
+        # Annotazione per la slope iniziale
+        slope_inj = stats.get("slope_inj_0_120s", None)
+        if slope_inj is not None:
+            ax.text(0.02, 0.9, f"Slope(0-120s)={slope_inj:.2f}",
+                    transform=ax.transAxes, color='magenta', fontsize=10)
+
+    # Annotazioni per le metriche ratio (salvate in ratio_stats)
+    if ratio_stats is not None:
+        ratio_mean = ratio_stats.get("ratio_intervals_mean", None)
+        if ratio_mean is not None and not np.isnan(ratio_mean):
+            ax.text(0.02, 0.85, f"Ratio mean={ratio_mean:.2f}",
+                    transform=ax.transAxes, color='green', fontsize=10)
+        ratio_max = ratio_stats.get("ratio_max", None)
+        if ratio_max is not None and not np.isnan(ratio_max):
+            ax.text(0.02, 0.80, f"Ratio max={ratio_max:.2f}",
+                    transform=ax.transAxes, color='green', fontsize=10)
+
     os.makedirs(output_dir, exist_ok=True)
     plot_path = os.path.join(output_dir, f"plot_{base_name}.png")
     plt.savefig(plot_path)
     plt.close(fig)
-
     print(f"Plot salvato in: {plot_path}")
+
 
 
 
