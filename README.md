@@ -156,8 +156,8 @@ I grafici vengono salvati nelle seguenti directory:
   ```python
   PATH_GRAFICI_DIAGNOSTIC = "percorso/cartella/stravaso_processed/grafici"
   ```
-⚠️ **Importante:** Le cartelle "grafici" vengono create se non esistono
 ---
+⚠️ **Importante:** Le cartelle "grafici" vengono create se non esistenti all'interno delle due cartelle apposite
 
 ## 📊 Output Generati
 
