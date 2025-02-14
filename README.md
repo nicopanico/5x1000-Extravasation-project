@@ -75,6 +75,7 @@ ABC
 
 Per non modificare il path nei file si consiglia di mantenere una struttura delle folder organizzata in questo modo:
 
+```bash
 ProjectRoot/
 ├── code/
 │   ├── config.py
