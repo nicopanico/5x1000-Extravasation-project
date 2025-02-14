@@ -142,7 +142,7 @@ I percorsi sono definiti in `config.py`:
   ROOT_CONTROLATERALS_DIAGNOSTIC = "percorso/cartella/stravaso_processed/controlaterals"
   ```
 
-⚠️ **Importante:** Questi percorsi sono presi in automatico dallo script, è sufficiente che lo schema delle cartelle del tuo progetto sia come indicato nella sezione (#-struttura-del-progetto).
+⚠️ **Importante:** Questi percorsi sono presi in automatico dallo script, è sufficiente che lo schema delle cartelle del tuo progetto sia come indicato nella sezione [Struttura del Progetto](#-struttura-del-progetto).
 
 ### 📊 Directory di Output  
 
