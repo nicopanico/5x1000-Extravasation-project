@@ -16,14 +16,10 @@ Il progetto è stato sviluppato per confrontare i dati di **injection** e **cont
 - [Installazione](#-installazione)
 - [Configurazione](#-configurazione)
 - [Modalità di Esecuzione](#-modalità-di-esecuzione)
-  - [Modalità Terapia](#modalità-terapia)
-  - [Modalità Diagnostica](#modalità-diagnostica)
 - [Metriche Calcolate](#-metriche-calcolate)
-  - [Analisi Terapia](#analisi-terapia)
-  - [Analisi Diagnostica](#analisi-diagnostica)
 - [Output Generati](#-output-generati)
 - [Come Usare ed Estendere il Codice](#-come-usare-ed-estendere-il-codice)
-- [Licenza](#-licenza)
+
 
 ---
 
@@ -146,7 +142,7 @@ I percorsi sono definiti in `config.py`:
   ROOT_CONTROLATERALS_DIAGNOSTIC = "percorso/cartella/stravaso_processed/controlaterals"
   ```
 
-⚠️ **Importante:** Modifica questi percorsi per adattarli alla tua struttura di file.
+⚠️ **Importante:** Questi percorsi sono presi in automatico dallo script, è sufficiente che lo schema delle cartelle del tuo progetto sia come indicato nella sezione [#struttura-del-progetto].
 
 ### 📊 Directory di Output  
 
@@ -160,7 +156,7 @@ I grafici vengono salvati nelle seguenti directory:
   ```python
   PATH_GRAFICI_DIAGNOSTIC = "percorso/cartella/stravaso_processed/grafici"
   ```
-
+⚠️ **Importante:** Le cartelle "grafici" vengono create se non esistono
 ---
 
 ## 📊 Output Generati
@@ -201,9 +197,6 @@ python main.py --mode diagnostic
 ---
 
 
-## 📜 Licenza
-
-*(Inserisci qui il testo della licenza applicata al progetto.)*
 
 
 
