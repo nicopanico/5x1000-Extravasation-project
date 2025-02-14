@@ -1,14 +1,14 @@
 # 📊 Analisi Dati per Terapia e Diagnostica
 
-Questo repository contiene un insieme di script Python per l'analisi dei dati relativi a **terapie** e **acquisizioni diagnostiche**.  
+Questo repository contiene un insieme di script Python per l'analisi dei dati relativi a terapie e acquisizioni diagnostiche.  
 Il progetto è stato sviluppato per confrontare i dati di **injection** e **controlateral** provenienti da dosimetri (o sistemi analoghi) e per calcolare statistiche e metriche aggiuntive utili a:
 
-- **Identificare casi di stravaso** (quando l’andamento della dose nel braccio di injection risulta anomalo).
-- **Caratterizzare e confrontare l’andamento delle terapie o delle acquisizioni diagnostiche** in generale.
+- ✅ **Identificare casi di stravaso** (quando l’andamento della dose nel braccio di injection risulta anomalo).
+- 📈 **Caratterizzare e confrontare l’andamento delle terapie o delle acquisizioni diagnostiche**.
 
 ---
 
-## 📌 Sommario
+## 🔹 Sommario
 
 - [Overview](#-overview)
 - [Requisiti](#-requisiti)
@@ -16,11 +16,11 @@ Il progetto è stato sviluppato per confrontare i dati di **injection** e **cont
 - [Installazione](#-installazione)
 - [Configurazione](#-configurazione)
 - [Modalità di Esecuzione](#-modalità-di-esecuzione)
-  - [Modalità Terapia](#-modalità-terapia)
-  - [Modalità Diagnostica](#-modalità-diagnostica)
+  - [Modalità Terapia](#modalità-terapia)
+  - [Modalità Diagnostica](#modalità-diagnostica)
 - [Metriche Calcolate](#-metriche-calcolate)
-  - [Analisi Terapia](#-analisi-terapia)
-  - [Analisi Diagnostica](#-analisi-diagnostica)
+  - [Analisi Terapia](#analisi-terapia)
+  - [Analisi Diagnostica](#analisi-diagnostica)
 - [Output Generati](#-output-generati)
 - [Come Usare ed Estendere il Codice](#-come-usare-ed-estendere-il-codice)
 - [Licenza](#-licenza)
@@ -29,48 +29,47 @@ Il progetto è stato sviluppato per confrontare i dati di **injection** e **cont
 
 ## 🔍 Overview
 
-Il software esegue i seguenti passaggi:
+Il software esegue i seguenti step:
 
-1. **Caricamento e Pulizia dei Dati**  
-   - Lettura dei file CSV con gestione dei separatori decimali, spazi extra e duplicati.
-   - Conversione dei timestamp in formato `datetime`, con impostazione come indice.
+### 📥 1️⃣ Caricamento e Pulizia dei Dati
+✔️ Lettura dei file **CSV** (gestione di separatori decimali, spazi extra, colonne duplicate).  
+✔️ Conversione dei **timestamp** in formato datetime.  
+✔️ Sincronizzazione tra **injection** e **controlateral**.  
 
-2. **Sincronizzazione e Allineamento**  
-   - Sincronizzazione dei dati di injection e controlateral (correzione di eventuali shift temporali).
-   - Allineamento su una griglia temporale regolare (step di 1 secondo).
+### ⏳ 2️⃣ Sincronizzazione e Allineamento
+✔️ Sincronizzazione dei dati tra **injection** e **controlateral** (con eventuali correzioni di shift temporali).  
+✔️ Allineamento su una **griglia temporale regolare** (1 secondo di step).  
 
-3. **Analisi del Picco**  
-   - Identificazione del **tempo e valore di picco**.
-   - Calcolo della **media dei dati filtrati**.
-   - Determinazione del **tempo al plateau** (tempo in cui la dose raggiunge il 90% del plateau).
+### 📊 3️⃣ Analisi del Picco
+✔️ Calcolo del **picco** (tempo e valore).  
+✔️ Identificazione del **tempo al plateau** (90% del valore stabile).  
+✔️ Calcolo di **metriche aggiuntive** per la diagnosi o la terapia.  
 
-4. **Calcolo di Metriche Aggiuntive**  
-   - **Terapia:** tempo al 90% per injection e controlateral, AUC-delta, slope iniziale, ratio a intervalli.
-   - **Diagnostica:** normalizzazione delle colonne, calcolo di picchi e plateau su *dose_rate*.
+### 📈 4️⃣ Calcolo di Metriche Aggiuntive
+- Per **terapia** (tempo al 90%, AUC-delta, slope iniziale, ratio a intervalli...).
+- Per **diagnostica** (colonne normalizzate, calcolo di picchi e plateau su *dose_rate*).
 
-5. **Plot dei Risultati**  
-   - Grafici annotati con curve di injection e controlateral.
-   - Annotazioni per t₉₀, slope, ratio, ecc.
+### 📉 5️⃣ Plot dei Risultati
+✔️ Grafici annotati con curve di **injection** e **controlateral**.  
+✔️ **Annotazioni per t₉₀, slope, ratio, ecc.**.  
 
-6. **Salvataggio dei Risultati in Excel**  
-   - File `risultati_finali.xlsx`, con i fogli: `"Stats"`, `"Delta"` e `"Ratio"`.
+### 💾 6️⃣ Salvataggio dei Risultati in Excel
+✔️ Creazione del file **risultati_finali.xlsx**.  
+✔️ Salvataggio di tre fogli Excel: **Stats**, **Delta**, **Ratio**.  
 
 ---
 
-## 🔧 Requisiti
+## 📋 Requisiti
 
-- **Python 3.7+**
-- Librerie Python:
-  - `pandas`
-  - `numpy`
-  - `matplotlib`
-  - `scipy`
-  - `xlsxwriter` (oppure `openpyxl`)
-  - `argparse`
-
-Installa le dipendenze con:
-
+✔ **Python 3.7+**  
+✔ **Librerie richieste:**  
 ```bash
-pip install -r requirements.txt
+pandas
+numpy
+matplotlib
+scipy
+xlsxwriter  # (oppure openpyxl)
+argparse
+
 
 
