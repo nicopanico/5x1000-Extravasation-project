@@ -63,13 +63,36 @@ Il software esegue i seguenti step:
 
 ✔ **Python 3.7+**  
 ✔ **Librerie richieste:**  
-```bash
 pandas
 numpy
 matplotlib
 scipy
 xlsxwriter  # (oppure openpyxl)
 argparse
+ABC
 
+## 📂 Struttura del Progetto
+
+Per non modificare il path nei file si consiglia di mantenere una struttura delle folder organizzata in questo modo:
+
+ProjectRoot/
+├── code/
+│   ├── config.py
+│   ├── data_manager.py
+│   ├── main.py
+│   ├── peak_analysis.py
+│   ├── delta_analysis.py
+│   ├── additional_metrics.py
+│   ├── plot_manager.py
+│   └── analysis/
+│       ├── __init__.py
+│       ├── base_analysis.py
+│       ├── therapy_analysis.py
+│       └── diagnostic_analysis.py
+├── injections/              # CSV per la terapia
+├── controlaterals/          # CSV per la terapia
+└── stravaso_processed/      # CSV per la diagnostica
+    ├── injections/
+    └── controlaterals/
 
 
