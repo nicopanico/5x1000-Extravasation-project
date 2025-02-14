@@ -72,10 +72,11 @@ scipy
 xlsxwriter  # (oppure openpyxl)
 argparse
 ABC
+```
+
+---
 
 ## 📂 Struttura del Progetto
-
-Per non modificare il path nei file si consiglia di mantenere una struttura delle folder organizzata in questo modo:
 
 ```bash
 ProjectRoot/
@@ -97,13 +98,36 @@ ProjectRoot/
 └── stravaso_processed/      # CSV per la diagnostica
     ├── injections/
     └── controlaterals/
+```
 
+---
+
+## 📊 Metriche Calcolate
+
+Il software calcola diverse **metriche chiave** per valutare il comportamento della dose registrata nel tempo. Queste metriche aiutano sia a **identificare lo stravaso** sia a **caratterizzare il comportamento della terapia o della diagnostica**.
+
+### 🔹 **Metriche per Terapia**
+- **Picco della dose** (`peak_inj_time_s`, `peak_inj_value`, `peak_con_time_s`, `peak_con_value`)
+- **Media dei dati filtrati** (`mean_inj_filtered`, `mean_con_filtered`)
+- **Tempo al 90% della saturazione** (`time_to_90pct_inj`, `time_to_90pct_con`)
+- **Slope iniziale** (`slope_inj_0_120s`)
+- **Area sotto la curva (AUC-delta)** (`AUC_delta`)
+- **Rapporto tra injection e controlateral (Ratio)**  
+  - `ratio_60s`, `ratio_120s`, ..., `ratio_900s` (ogni 60s fino a 15 minuti)
+  - `ratio_intervals_mean`
+  - `ratio_max`
+
+### 🔹 **Metriche per Diagnostica**
+- **Picco della dose** (`peak_inj_time_s`, `peak_inj_value`)
+- **Tempo al 90% della dose massima** (`time_to_plateau_inj`, `time_to_plateau_con`)
+- **Slope iniziale** (`slope_rising`)
+- **Area sotto la curva** (`area_after_peak`)
+
+---
 ## ⚙️ CONFIGURAZIONE
 
 Il file di configurazione principale del progetto è `config.py`.  
 Qui vengono definiti i **percorsi dei dati**, le **modalità di analisi**, e le **colonne di interesse** per le due modalità di esecuzione: **terapia** e **diagnostica**.
-
----
 
 ### 📂 Percorsi dei Dati  
 
@@ -111,28 +135,18 @@ I dati vengono caricati da file **CSV** situati in directory specifiche.
 I percorsi sono definiti in `config.py`:
 
 - **Terapia**  
-  - Cartella dei dati di **injection**:  
-    ```python
-    ROOT_INJECTIONS_THERAPY = "percorso/cartella/injections"
-    ```
-  - Cartella dei dati **controlateral**:  
-    ```python
-    ROOT_CONTROLATERALS_THERAPY = "percorso/cartella/controlaterals"
-    ```
+  ```python
+  ROOT_INJECTIONS_THERAPY = "percorso/cartella/injections"
+  ROOT_CONTROLATERALS_THERAPY = "percorso/cartella/controlaterals"
+  ```
 
 - **Diagnostica**  
-  - Cartella dei dati di **injection**:  
-    ```python
-    ROOT_INJECTIONS_DIAGNOSTIC = "percorso/cartella/stravaso_processed/injections"
-    ```
-  - Cartella dei dati **controlateral**:  
-    ```python
-    ROOT_CONTROLATERALS_DIAGNOSTIC = "percorso/cartella/stravaso_processed/controlaterals"
-    ```
+  ```python
+  ROOT_INJECTIONS_DIAGNOSTIC = "percorso/cartella/stravaso_processed/injections"
+  ROOT_CONTROLATERALS_DIAGNOSTIC = "percorso/cartella/stravaso_processed/controlaterals"
+  ```
 
 ⚠️ **Importante:** Modifica questi percorsi per adattarli alla tua struttura di file.
-
----
 
 ### 📊 Directory di Output  
 
@@ -141,6 +155,55 @@ I grafici vengono salvati nelle seguenti directory:
 - **Terapia**  
   ```python
   PATH_GRAFICI_THERAPY = "percorso/cartella/grafici"
+  ```
+- **Diagnostica**  
+  ```python
+  PATH_GRAFICI_DIAGNOSTIC = "percorso/cartella/stravaso_processed/grafici"
+  ```
+
+---
+
+## 📊 Output Generati
+
+1. **Grafici Annotati**  
+   - Curve di injection e controlateral.  
+   - Annotazioni per tempi al 90%, slope, ratio, ecc.  
+   - Salvati nella directory definita in `config.py`.
+
+2. **File Excel `risultati_finali.xlsx`**  
+   - Creato nella stessa cartella dei grafici.  
+   - Contiene tre fogli principali:
+     - **Stats**: statistiche generali.  
+     - **Delta**: delta calcolati a determinati time-point.  
+     - **Ratio**: metriche relative ai rapporti.
+
+---
+
+## 🛠️ Come Usare ed Estendere il Codice
+
+### Configurazione:
+- Modifica `config.py` per impostare i percorsi dei dati e la modalità di analisi.
+
+### Esecuzione:
+```bash
+python main.py --mode therapy
+```
+oppure
+```bash
+python main.py --mode diagnostic
+```
+
+### Estensione:
+- Il progetto utilizza una classe base `BaseAnalysis` per definire il flusso di lavoro.
+- Le classi `TherapyAnalysis` e `DiagnosticAnalysis` implementano la logica specifica per ciascuna modalità.
+- Per aggiungere nuove metriche, puoi modificare `analyze_peak`, `compute_therapy_metrics` o `compute_diagnostic_metrics`.
+
+---
+
+
+## 📜 Licenza
+
+*(Inserisci qui il testo della licenza applicata al progetto.)*
 
 
 
