@@ -63,6 +63,8 @@ Il software esegue i seguenti step:
 
 ✔ **Python 3.7+**  
 ✔ **Librerie richieste:**  
+
+```bash
 pandas
 numpy
 matplotlib
@@ -95,5 +97,50 @@ ProjectRoot/
 └── stravaso_processed/      # CSV per la diagnostica
     ├── injections/
     └── controlaterals/
+
+## ⚙️ CONFIGURAZIONE
+
+Il file di configurazione principale del progetto è `config.py`.  
+Qui vengono definiti i **percorsi dei dati**, le **modalità di analisi**, e le **colonne di interesse** per le due modalità di esecuzione: **terapia** e **diagnostica**.
+
+---
+
+### 📂 Percorsi dei Dati  
+
+I dati vengono caricati da file **CSV** situati in directory specifiche.  
+I percorsi sono definiti in `config.py`:
+
+- **Terapia**  
+  - Cartella dei dati di **injection**:  
+    ```python
+    ROOT_INJECTIONS_THERAPY = "percorso/cartella/injections"
+    ```
+  - Cartella dei dati **controlateral**:  
+    ```python
+    ROOT_CONTROLATERALS_THERAPY = "percorso/cartella/controlaterals"
+    ```
+
+- **Diagnostica**  
+  - Cartella dei dati di **injection**:  
+    ```python
+    ROOT_INJECTIONS_DIAGNOSTIC = "percorso/cartella/stravaso_processed/injections"
+    ```
+  - Cartella dei dati **controlateral**:  
+    ```python
+    ROOT_CONTROLATERALS_DIAGNOSTIC = "percorso/cartella/stravaso_processed/controlaterals"
+    ```
+
+⚠️ **Importante:** Modifica questi percorsi per adattarli alla tua struttura di file.
+
+---
+
+### 📊 Directory di Output  
+
+I grafici vengono salvati nelle seguenti directory:
+
+- **Terapia**  
+  ```python
+  PATH_GRAFICI_THERAPY = "percorso/cartella/grafici"
+
 
 
