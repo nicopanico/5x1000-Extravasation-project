@@ -132,7 +132,7 @@ Il software calcola diverse **metriche chiave** per valutare l’andamento della
 
 #### Delta Analysis
 
-- **\(\Delta(t)\) = |inj(t) − con(t)|**: differenza assoluta tra injection e controlateral in vari time-point.  
+- **(\Delta(t)) = |inj(t) − con(t)|**: differenza assoluta tra injection e controlateral in vari time-point.  
 - **mean_delta**: media delle differenze \(\Delta\).  
   - *Interpretazione*: valuta **quanto** i due lati (injection vs. controlateral) divergono nel tempo. Un \(\Delta\) elevato segnala un’**asimmetria** marcata fra i due bracci.
 
