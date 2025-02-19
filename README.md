@@ -118,7 +118,7 @@ Il software calcola diverse **metriche chiave** per valutare l’andamento della
 Nella classe `TherapyAnalysis`, oltre a calcolare i parametri comuni (peak analysis, media filtrata, ecc.), vengono introdotte alcune metriche specifiche per valutare l’andamento della **dose rate** nel contesto terapeutico:
 
 1. **Tempo al 90% del plateau** (`time_to_90pct_inj` e `time_to_90pct_con`)
-   - Dopo aver definito il "plateau" come la **media** degli ultimi 30 secondi della curva, si calcola il 90% di tale valore e si cerca **quando** la curva lo raggiunge.  
+   - Dopo aver definito il "plateau" come la **media** degli ultimi 120 secondi della curva, si calcola il 90% di tale valore e si cerca **quando** la curva lo raggiunge. Oppure la media dei 100 secondi dopo il picco. 
    - **Significato**: indica **quanto rapidamente** injection (o controlateral) arriva alla soglia “quasi-stazionaria” (90% del plateau). Un valore più basso suggerisce che la curva sale velocemente e si stabilizza.
 
 2. **AUC-delta** (`AUC_delta`)
