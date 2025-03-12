@@ -89,12 +89,16 @@ ProjectRoot/
 │       ├── base_analysis.py
 │       ├── therapy_analysis.py
 │       └── diagnostic_analysis.py
-├── injections/              # CSV per la terapia
-├── controlaterals/          # CSV per la terapia
-└── stravaso_processed/      # CSV per la diagnostica
-    ├── injections/
-    └── controlaterals/
-```
+├── Terapia/
+│   ├── injections/              # CSV per la terapia (iniezione)
+│   ├── controlaterals/          # CSV per la terapia (controlaterale)
+│   └── grafici/                 # Grafici e risultati (terapia)
+├── Diagnostica/
+│   └── stravaso_processed/
+│       ├── injections/          # CSV per la diagnostica (iniezione)
+│       ├── controlaterals/      # CSV per la diagnostica (controlaterale)
+│       └── grafici/             # Grafici e risultati (diagnostica)
+└── README.md
 
 ---
 
