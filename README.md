@@ -99,7 +99,7 @@ ProjectRoot/
 │       ├── controlaterals/      # CSV per la diagnostica (controlaterale)
 │       └── grafici/             # Grafici e risultati (diagnostica)
 └── README.md
-
+```
 ---
 
 ## 📊 Metriche Calcolate
