@@ -89,35 +89,110 @@ ProjectRoot/
 │       ├── base_analysis.py
 │       ├── therapy_analysis.py
 │       └── diagnostic_analysis.py
-├── injections/              # CSV per la terapia
-├── controlaterals/          # CSV per la terapia
-└── stravaso_processed/      # CSV per la diagnostica
-    ├── injections/
-    └── controlaterals/
+├── Terapia/
+│   ├── injections/              # CSV per la terapia (iniezione)
+│   ├── controlaterals/          # CSV per la terapia (controlaterale)
+│   └── grafici/                 # Grafici e risultati (terapia)
+├── Diagnostica/
+│   └── stravaso_processed/
+│       ├── injections/          # CSV per la diagnostica (iniezione)
+│       ├── controlaterals/      # CSV per la diagnostica (controlaterale)
+│       └── grafici/             # Grafici e risultati (diagnostica)
+└── README.md
 ```
-
 ---
 
 ## 📊 Metriche Calcolate
 
-Il software calcola diverse **metriche chiave** per valutare il comportamento della dose registrata nel tempo. Queste metriche aiutano sia a **identificare lo stravaso** sia a **caratterizzare il comportamento della terapia o della diagnostica**.
+Il software calcola diverse **metriche chiave** per valutare l’andamento della dose/dose rate registrata nel tempo, sia per **terapia** sia per **diagnostica**. Queste metriche aiutano a:
 
-### 🔹 **Metriche per Terapia**
-- **Picco della dose** (`peak_inj_time_s`, `peak_inj_value`, `peak_con_time_s`, `peak_con_value`)
-- **Media dei dati filtrati** (`mean_inj_filtered`, `mean_con_filtered`)
-- **Tempo al 90% della saturazione** (`time_to_90pct_inj`, `time_to_90pct_con`)
-- **Slope iniziale** (`slope_inj_0_120s`)
-- **Area sotto la curva (AUC-delta)** (`AUC_delta`)
-- **Rapporto tra injection e controlateral (Ratio)**  
-  - `ratio_60s`, `ratio_120s`, ..., `ratio_900s` (ogni 60s fino a 15 minuti)
-  - `ratio_intervals_mean`
-  - `ratio_max`
+1. **Identificare** eventuali anomalie (es. stravaso o curve “insolite”).  
+2. **Caratterizzare** in modo quantitativo la curva di dose/dose rate (valori massimi, velocità di salita, area residua…).
 
-### 🔹 **Metriche per Diagnostica**
-- **Picco della dose** (`peak_inj_time_s`, `peak_inj_value`)
-- **Tempo al 90% della dose massima** (`time_to_plateau_inj`, `time_to_plateau_con`)
-- **Slope iniziale** (`slope_rising`)
-- **Area sotto la curva** (`area_after_peak`)
+### 🔹 Struttura di Base delle Metriche
+
+1. **Peak Analysis** (tempo e valore del picco)  
+2. **Tempo al plateau** (rapido raggiungimento di una soglia% del picco)  
+3. **Media e Max** su injection e controlateral (dose o dose rate)  
+4. **Delta** injection–controlateral a tempo variabile  
+5. **Metriche aggiuntive** (area dopo picco, slope iniziale, etc.)
+
+### 🔹 Metriche per la **Terapia**
+
+Nella classe `TherapyAnalysis`, oltre a calcolare i parametri comuni (peak analysis, media filtrata, ecc.), vengono introdotte alcune metriche specifiche per valutare l’andamento della **dose rate** nel contesto terapeutico:
+
+1. **Tempo al 90% del plateau** (`time_to_90pct_inj` e `time_to_90pct_con`)
+   - Dopo aver definito il "plateau" come la **media** degli ultimi 120 secondi della curva, si calcola il 90% di tale valore e si cerca **quando** la curva lo raggiunge. Oppure la media dei 100 secondi dopo il picco. 
+   - **Significato**: indica **quanto rapidamente** injection (o controlateral) arriva alla soglia “quasi-stazionaria” (90% del plateau). Un valore più basso suggerisce che la curva sale velocemente e si stabilizza.
+
+2. **AUC-delta** (`AUC_delta`)
+   - Differenza tra injection e controlateral (`inj - con`), integrata rispetto al tempo (metodo del trapezio).  
+   - **Significato**: stima **quanto** la dose rate del braccio injection **eccede** (o difetta, se negativo) rispetto al controlateral **nell’intero arco temporale** (fino a 15 minuti). Un valore elevato potrebbe segnalare un grande scostamento “cumulato” tra i due lati (es. potenziale stravaso).
+
+3. **Slope iniziale Injection (0–120 s)** (`slope_inj_0_120s`)
+   - Pendenza del segnale injection calcolata tra 0 e 120 secondi.  
+   - **Significato**: misura la **rapidità di salita iniziale** del dose rate nel braccio iniettato; se il segnale cresce molto velocemente, lo slope è alto. È utile per capire se la sostanza si distribuisce rapidamente.
+
+4. **Metriche di Rapporto Injection–Controlateral** (dizionario `ratio_stats`)
+   - Calcola la serie `ratio_series = inj / con` (dose rate injection diviso controllo), e ne estrapola:
+     - `ratio_{t}s` ogni 60 secondi (fino a 15 minuti): es. `ratio_60s`, `ratio_120s`, …  
+     - `ratio_intervals_mean`: media dei rapporti a questi time-point.  
+     - `ratio_max`: massimo della serie `inj / con` su tutto l’intervallo.  
+     - `ratio_mean`: media globale dell’intero rapporto su injection e controlateral (no time-point specifici).  
+   - **Significato**: confronta i valori di dose rate su injection e controlateral lungo l’intero arco di 15 minuti, sia in punti fissi (ogni 60s) sia globalmente. Un rapporto molto alto indica che il braccio injection ha dose rate marcatamente maggiore rispetto al controlateral (possibile segno di accumulo anomalo).
+
+---
+
+**In sintesi**, l’analisi per la terapia si focalizza su:
+
+- **Quanto** e **come** la curva injection supera (o si differenzia da) la curva controlateral (AUC-delta, ratio).  
+- **Quando** la curva raggiunge una soglia di “stabilità” (tempo al 90%).  
+- **Con che velocità** sale inizialmente (slope 0–120s).  
+
+Tali informazioni aiutano a **verificare** se la dose si distribuisce in modo normale (controlateral simile a injection, ratio moderato) o se ci sono anomalie (ratio alto, AUC-delta elevata, slope molto ripido, etc.). 
+
+### 🔹 Metriche per la **Diagnostica**
+
+Nell’analisi **diagnostica**, il codice si concentra soprattutto su variabili di **dose rate** (μSv/h) per un intervallo più breve (ad esempio 10 minuti) e calcola metriche incentrate su **picco** e **rapidità** dell’andamento:
+
+1. **Tempo al Plateau** (`time_to_plateau_inj` e `time_to_plateau_con`)  
+   - Ricerca dell’istante in cui injection (o controlateral) raggiunge l’85–90% del proprio picco.  
+   - **Significato**: quantifica **quanto velocemente** la curva sale quasi al massimo. Un tempo al plateau minore indica un’ascesa rapida della dose rate.
+
+2. **Slope Iniziale** (`slope_rising`)  
+   - Pendenza (o “speed of rise”) dalla prima misurazione fino al tempo di picco.  
+   - **Significato**: valuta **la velocità** con cui il segnale (dose rate) cresce inizialmente. Un valore elevato suggerisce un’immissione o diffusione rapida del radiofarmaco.
+
+3. **Area dopo il Picco** (`area_after_peak`)  
+   - Integrale della curva dal picco fino al termine dell’intervallo (ad es. 10 minuti).  
+   - **Significato**: misura la **quantità di dose “residua”** nella fase discendente della curva, utile a stimare se c’è una coda significativa dopo aver raggiunto il massimo.
+
+4. **Delta Dose** e **Ratio Dose** (`delta_dose`, `ratio_dose`)  
+   - **delta_dose** = (peak_value − mean_value)  
+   - **ratio_dose** = (peak_value − mean_value) / peak_value  
+   - **Significato**: indicano **quanto** (in valore assoluto o in termini percentuali) il picco eccede la media del segnale. Un alto `delta_dose` suggerisce un picco molto pronunciato, mentre `ratio_dose` > 0.8 (ad es.) significherebbe che la media sta ben sotto il picco.
+
+---
+
+**In sintesi**, nell’analisi diagnostica si enfatizzano:
+
+- **Il picco** (max dose rate), **quanto velocemente** lo si raggiunge (tempo al plateau, slope).  
+- **Quanta coda** c’è nella fase discendente (area_after_peak).  
+- **Quanto** il picco eccede la media (delta_dose, ratio_dose).  
+
+Questo permette di **caratterizzare** una curva di dose rate in modo approfondito, fornendo parametri utili a valutazioni cliniche o di processo (se la dose in un certo distretto corporeo sale rapidamente e si mantiene, o se c’è un picco molto breve e poi un rapido calo, ecc.). 
+
+---
+
+### 🔹 Esempi di Significato Fisico
+
+- **Picco** (peak_inj_value, peak_inj_time_s): massimo tasso di dose (dose rate) → *punto di maggiore intensità* nel braccio di iniezione.  
+- **Tempo al plateau**: *velocità di reazione del sistema*, quanto tempo serve a raggiungere l’85–90% del valore di picco.  
+- **Area dopo il picco** (area_after_peak): *dose residua* o *quantità integrata* accumulata nella fase discendente.  
+- **Slope iniziale** (slope_rising): *rapidità con cui la dose cresce* dall’inizio fino al picco.  
+- **Delta** injection–controlateral: *differenza tra i due bracci*, potenzialmente utile per evidenziare stravaso (lato injection) se la curva si discosta molto dal controlateral.  
+
+Con queste metriche, il software fornisce un **quadro completo** dell’andamento temporale di dose/dose rate e rende possibile il **confronto** tra i due lati (injection vs. controlateral) e/o tra diverse acquisizioni.
 
 ---
 ## ⚙️ CONFIGURAZIONE
