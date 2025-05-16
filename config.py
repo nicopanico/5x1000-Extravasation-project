@@ -45,15 +45,16 @@ COLUMNS_CONTROLATERAL_THERAPY = {
 
 # Colonne di interesse per la diagnostica
 COLUMNS_INJECTION_DIAGNOSTIC = {
-    'time': 'timestamp',
-    'dose_rate': 'dose_rate'
+    "time"      : ["timestamp", "Timestamp", "Date / Time", "record time"],
+    "dose_rate" : ["dose_rate", "Dose Rate", "Intensità di dose (μSv/h)",
+                   "DR_Max", "C1_Max"]      # metti qui tutti gli alias plausibili
 }
 COLUMNS_CONTROLATERAL_DIAGNOSTIC = {
-    'time': 'timestamp',
-    'dose_rate': 'dose_rate'
+    "time"      : ["timestamp", "Timestamp"],
+    "dose_rate" : ["dose_rate", "Dose Rate", "Intensità di dose (μSv/h)"]
 }
 
 # Modalità di analisi: "therapy" o "diagnostic"
-ANALYSIS_MODE = "therapy"  # Cambia in "therapy" se desideri analizzare i dati di Terapia
+ANALYSIS_MODE = "diagnostic"  # Cambia in "therapy" se desideri analizzare i dati di Terapia
 
 

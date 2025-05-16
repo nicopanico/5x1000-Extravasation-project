@@ -5,14 +5,67 @@ Created on Tue Feb  4 09:26:59 2025
 @author: PANICON
 """
 
-# analysis/diagnostic_analysis.py
+# -*- coding: utf-8 -*-
+"""
+DiagnosticAnalysis – versione rivista (2025‑04‑28, build B‑full)
+
+* Start basato sulla pendenza (5 %·peak / s per ≥ 4 s)
+* Picco massimo nei primi 120 s dallo start
+* Plateau = derivata < 2 %·peak / s per ≥ 30 s
+* Metriche robuste a stravaso (min peak/plateau = 1.2)
+* Filtra curve di puro fondo (peak < 1 µSv/h)
+* Completa di plot_results e ritorni corretti.
+"""
+
 from analysis.base_analysis import BaseAnalysis
-from peak_analysis import analyze_peak  
-from delta_analysis import compute_delta_timepoints
+from peak_analysis import analyze_peak
 from plot_manager import plot_injection_controlateral
-from additional_metrics import compute_additional_metrics  
+from additional_metrics import compute_additional_metrics
+
+import numpy as np
+import pandas as pd
+from scipy.signal import find_peaks, peak_prominences
+
+# -----------------------------------------------------------------------------
+# Parametri configurabili
+# -----------------------------------------------------------------------------
+PEAK_SEARCH_MAX_S = 120          # picco cercato nei primi 2 min
+SLOPE_RISE_FRAC = 0.05           # 5 %·peak/s per start
+RISE_WIN_S = 4                   # pendenza stabile ≥ 4 s
+PEAK_PROM_FRAC = 0.05            # prominenza minima 5 %
+PEAK_OFFSET_MIN_S = 30           # attendi 30 s prima di cercare plateau
+SLOPE_PLAT_FRAC = 0.02           # plateau: derivata < 2 %·peak/s
+STABLE_WIN_S = 30                # plateau stabile ≥ 30 s
+WINDOW_AFTER_PEAK_S = 200        # analizza max 3.5 min post‑picco
+PLATEAU_TAIL_S = None            # opz. media solo coda plateau
+MIN_PEAK_OVER_PLATEAU = 1.2      # accetta stravaso
+MIN_ABS_PEAK = 1.0               # µSv/h sotto cui si skippa
+# -----------------------------------------------------------------------------
+
+
+def _consecutive_true_blocks(mask: np.ndarray, times: np.ndarray, min_duration: float):
+    """Restituisce liste (t_start, t_end) dove mask True per ≥ min_duration."""
+    if not mask.any():
+        return []
+    idx = np.flatnonzero(mask)
+    starts = [idx[0]]
+    for i in range(1, len(idx)):
+        if idx[i] != idx[i - 1] + 1:
+            starts.append(idx[i])
+    blocks = []
+    for s in starts:
+        e = s
+        while e + 1 < len(mask) and mask[e + 1]:
+            e += 1
+        if times[e] - times[s] >= min_duration:
+            blocks.append((times[s], times[e]))
+    return blocks
+
 
 class DiagnosticAnalysis(BaseAnalysis):
+    """Pipeline diagnostica con algoritmo robusto a stravaso."""
+
+    # --------------------------------------------------- colonne mapping
     def get_injection_columns(self):
         from config import COLUMNS_INJECTION_DIAGNOSTIC
         return COLUMNS_INJECTION_DIAGNOSTIC
@@ -21,80 +74,121 @@ class DiagnosticAnalysis(BaseAnalysis):
         from config import COLUMNS_CONTROLATERAL_DIAGNOSTIC
         return COLUMNS_CONTROLATERAL_DIAGNOSTIC
 
+    # --------------------------------------------------- load & align
     def load_data(self, inj_path, con_path):
-        """
-        Carica e pulisce i dati dai file specificati utilizzando i dizionari delle colonne di interesse.
-        """
-        df_inj = self.data_manager.load_and_clean_data(inj_path, self.get_injection_columns())
-        df_con = self.data_manager.load_and_clean_data(con_path, self.get_controlateral_columns())
-        return df_inj, df_con
+        dm = self.data_manager
+        return dm.load_and_clean_data(inj_path, self.get_injection_columns()), \
+               dm.load_and_clean_data(con_path, self.get_controlateral_columns())
 
     def synchronize_and_align(self, df_inj, df_con, base_name):
-        # Riutilizziamo le regole di sincronizzazione già presenti nel DataManager
-        df_inj_sync, df_con_sync = self.data_manager.synchronize_data(df_inj, df_con, base_name)
-        # Per l'allineamento usiamo lo stesso metodo (ad esempio 15 minuti di finestra)
-        df_inj_aligned, df_con_aligned = self.data_manager.align_with_injection_reference(df_inj_sync, df_con_sync, total_minutes=15)
-        return df_inj_aligned, df_con_aligned
+        dm = self.data_manager
+        df_inj_s, df_con_s = dm.synchronize_data(df_inj, df_con, base_name)
+        return dm.align_with_injection_reference(df_inj_s, df_con_s, total_minutes=15)
 
+    # --------------------------------------------------- core metrics
     def analyze_peak(self, df_inj, df_con):
-        """
-        Per la diagnostica, il file ha le colonne "Timestamp" e "dose_rate".
-        Usiamo la funzione analyze_peak, adattando i parametri:
-          - column_for_peak: 'dose_rate'
-          - time_column: 'time_seconds'
-          - filtro con sigma minore (ad esempio 3.0)
-          - plateau_fraction leggermente diversa (ad esempio 0.85)
-        Inoltre, aggiungiamo le metriche extra:
-          - delta_dose: differenza fra il picco e la media (plateau)
-          - ratio_dose: (picco - media) / picco
-        """
-        df_inj_filtered, df_con_filtered, stats = analyze_peak(
+        if df_inj.empty or df_con.empty:
+            return df_inj, df_con, {}
+
+        # 1. filtro gaussiano
+        df_inj_f, df_con_f, _ = analyze_peak(
             df_inj, df_con,
             column_for_peak="dose_rate",
             time_column="time_seconds",
             apply_filter=True,
-            filter_sigma=3.0,   # Parametro adattato per diagnostica
-            plateau_fraction=0.85
+            filter_sigma=3.0,
+            plateau_fraction=0.85,
         )
+        col, tcol = "dose_rate", "time_seconds"
 
-        # Aggiungiamo le metriche extra
-        peak_value = stats.get("peak_inj_value")
-        mean_value = stats.get("mean_inj_filtered")
-        if peak_value is not None and mean_value is not None:
-            delta_dose = peak_value - mean_value
-            ratio_dose = (peak_value - mean_value) / peak_value if peak_value != 0 else None
+        # 2. start basato su slope
+        dy = np.gradient(df_inj_f[col].values)
+        dt = np.gradient(df_inj_f[tcol].values)
+        slope = dy / dt
+        peak_global = df_inj_f[col].max()
+        slope_thr = SLOPE_RISE_FRAC * peak_global
+        rise_blocks = _consecutive_true_blocks(slope >= slope_thr, df_inj_f[tcol].values, RISE_WIN_S)
+        rise_start_t = rise_blocks[0][0] if rise_blocks else df_inj_f[tcol].iloc[0]
+
+        # tronca e azzera tempo
+        df_inj_f = df_inj_f[df_inj_f[tcol] >= rise_start_t].copy()
+        df_con_f = df_con_f[df_con_f[tcol] >= rise_start_t].copy()
+        df_inj_f[tcol] -= rise_start_t
+        df_con_f[tcol] -= rise_start_t
+
+        # 3. picco entro 120 s
+        win = df_inj_f[df_inj_f[tcol] <= PEAK_SEARCH_MAX_S]
+        if win.empty:
+            return df_inj_f, df_con_f, {}
+        peaks, _ = find_peaks(win[col].values)
+        if len(peaks):
+            prom = peak_prominences(win[col].values, peaks)[0]
+            valid = [p for p, pr in zip(peaks, prom) if pr >= PEAK_PROM_FRAC * win[col].max()]
+            peak_idx = win.index[valid[0]] if valid else win.index[peaks[0]]
         else:
-            delta_dose = None
-            ratio_dose = None
+            peak_idx = win[col].idxmax()
+        peak_time = df_inj_f.loc[peak_idx, tcol]
+        peak_val = df_inj_f.loc[peak_idx, col]
 
-        stats["delta_dose"] = delta_dose
-        stats["ratio_dose"] = ratio_dose
+        if peak_val < MIN_ABS_PEAK:
+            print("Curve a fondo – skip")
+            return pd.DataFrame(), pd.DataFrame(), {}
 
-        # Richiama la funzione per calcolare metriche aggiuntive
-        stats = compute_additional_metrics(df_inj_filtered, stats, time_column="time_seconds", dose_column="dose_rate")
-        return df_inj_filtered, df_con_filtered, stats
+        # 4. restringi finestra totale
+        df_inj_f = df_inj_f[df_inj_f[tcol] <= peak_time + WINDOW_AFTER_PEAK_S].copy()
+        df_con_f = df_con_f[df_con_f[tcol] <= peak_time + WINDOW_AFTER_PEAK_S].copy()
 
+        # 5. plateau via slope
+        post = df_inj_f[df_inj_f[tcol] >= peak_time + PEAK_OFFSET_MIN_S]
+        if post.empty:
+            plateau_start_t = peak_time + PEAK_OFFSET_MIN_S
+        else:
+            slope_post = np.abs(np.gradient(post[col].values) / np.gradient(post[tcol].values))
+            blocks = _consecutive_true_blocks(slope_post < SLOPE_PLAT_FRAC * peak_val,
+                                              post[tcol].values, STABLE_WIN_S)
+            plateau_start_t = blocks[0][0] if blocks else peak_time + PEAK_OFFSET_MIN_S
+
+        plateau_inj = df_inj_f[df_inj_f[tcol] >= plateau_start_t]
+        if PLATEAU_TAIL_S:
+            plateau_inj = plateau_inj[plateau_inj[tcol] >= plateau_inj[tcol].max() - PLATEAU_TAIL_S]
+        mean_pl_inj = plateau_inj[col].mean()
+
+        plateau_con = df_con_f[df_con_f[tcol] >= plateau_start_t]
+        if PLATEAU_TAIL_S:
+            plateau_con = plateau_con[plateau_con[tcol] >= plateau_con[tcol].max() - PLATEAU_TAIL_S]
+        mean_pl_con = plateau_con[col].mean()
+
+        # 6. eventuale ricalcolo picco se troppo vicino plateau
+        if mean_pl_inj > 0 and peak_val < MIN_PEAK_OVER_PLATEAU * mean_pl_inj:
+            pre = df_inj_f[df_inj_f[tcol] < plateau_start_t]
+            if not pre.empty:
+                peak_idx = pre[col].idxmax()
+                peak_time = df_inj_f.loc[peak_idx, tcol]
+                peak_val = df_inj_f.loc[peak_idx, col]
+
+        # 7. metriche
+        stats = {
+            "peak_inj_time_s": peak_time,
+            "peak_inj_value": peak_val,
+            "plateau_start_time_s": plateau_start_t,
+            "mean_plateau_inj": mean_pl_inj,
+            "mean_plateau_con": mean_pl_con,
+            "delta_dose": peak_val - mean_pl_inj,
+            "ratio_dose": (peak_val - mean_pl_inj) / peak_val if peak_val else None,
+            "time_to_plateau_inj": plateau_start_t - peak_time,
+        }
+        stats = compute_additional_metrics(df_inj_f, stats, time_column=tcol, dose_column=col)
+        return df_inj_f, df_con_f, stats
+
+    # --------------------------------------------------- plot
     def plot_results(self, base_name, df_inj, df_con, df_inj_filtered, df_con_filtered):
         from config import PATH_GRAFICI_DIAGNOSTIC
-        # Plot dei dati originali
-        # plot_injection_controlateral(
-        #     base_name=base_name,
-        #     df_inj=df_inj,
-        #     df_con=df_con,
-        #     output_dir=PATH_GRAFICI_DIAGNOSTIC,
-        #     yscale='log',
-        #     dose_column='dose_rate',      # Usato per diagnostica
-        #     time_column='time_seconds'
-        # )
-        # Plot dei dati filtrati
         plot_injection_controlateral(
             base_name=f"{base_name}_filtered",
             df_inj=df_inj_filtered,
             df_con=df_con_filtered,
             output_dir=PATH_GRAFICI_DIAGNOSTIC,
-            yscale='log',
-            dose_column='dose_rate',
-            time_column='time_seconds'
+            yscale="log",
+            dose_column="dose_rate",
+            time_column="time_seconds",
         )
-
-

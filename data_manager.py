@@ -16,6 +16,8 @@ class DataManager:
         self.root_injection = root_injection
         self.root_controlateral = root_controlateral
 
+    
+
     def get_file_names(self):
         """
         Cerca i file CSV nelle cartelle injection/ e controlaterals/
@@ -43,89 +45,106 @@ class DataManager:
         common_bases = inj_bases.intersection(con_bases)
 
         return sorted(list(common_bases))
-    
-    def load_and_clean_data(self, path, columns_of_interest=None, sep=",", encoding="utf-8"):
+        
+    @staticmethod
+    def _first_present(df_cols, aliases):
+        """
+        Restituisce il primo alias presente fra le colonne, ignorando maiuscole/minuscole.
+        """
+        if isinstance(aliases, str):
+            aliases = [aliases]
+
+        # mappa lowercase → nome originale
+        lc_map = {c.lower(): c for c in df_cols}
+
+        for a in aliases:
+            key = a.lower()
+            if key in lc_map:
+                return lc_map[key]  # restituisce il nome esatto presente nel DF
+        return None
+
+    def load_and_clean_data(self, path, columns_of_interest=None,
+                            sep=",", encoding="utf-8"):
+        """
+        Lettura CSV robusta e normalizzazione nomi-colonna.
+        Supporta alias multipli definiti in config (liste di stringhe).
+        """
+        import pandas as pd
+        from config import ANALYSIS_MODE
+
+        # ---------- 1. Lettura CSV (prima virgola, poi punto-virgola) ----------
         try:
-            # Legge il CSV usando decimal="," per interpretare correttamente i numeri
-            df_raw = pd.read_csv(path, sep=sep, encoding=encoding, decimal=",")
-            # Rimuove spazi extra nei nomi delle colonne
-            df_raw.columns = df_raw.columns.str.strip()
-            
-            # Se l'analisi è in modalità diagnostica, trasforma i nomi delle colonne in minuscolo
-            from config import ANALYSIS_MODE
-            if ANALYSIS_MODE.lower() == "diagnostic":
-                df_raw.columns = df_raw.columns.str.lower()
-            else:
-                df_raw.columns = df_raw.columns.str.strip()
-            
-            # Rimuove eventuali colonne duplicate
-            if df_raw.columns.duplicated().any():
-                df_raw = df_raw.loc[:, ~df_raw.columns.duplicated(keep='first')]
-            
-            # Gestione della colonna del tempo
-            if columns_of_interest and "time" in columns_of_interest:
-                time_col = columns_of_interest["time"]
-                if time_col not in df_raw.columns:
-                    # Se non trova la colonna, prova una re-lettura con header=None e nomi predefiniti
-                    print(f"Attenzione: la colonna del tempo '{time_col}' non è presente in {path}. Provo a re-lettura con header=None.")
-                    default_names = [
-                        "timestamp", "###", "Type", "Status", "Alarm status", "C1_Max", "C1_Mean",
-                        "dose_rate", "DR_Mean", "Neutron_Max", "Neutron_Mean", "Msd time",
-                        "Spectrum##", "Temperature", "OperationTime", "Alarm threshold 1",
-                        "Alarm threshold 2", "Alarm threshold 3", "Alarm threshold 4",
-                        "Alarm threshold 5", "Alarm threshold 6", "Unnamed: 21"
-                    ]
-                    df_raw = pd.read_csv(path, sep=sep, encoding=encoding, header=None, names=default_names, decimal=",")
-                    df_raw.columns = df_raw.columns.str.strip()
-                    if df_raw.columns.duplicated().any():
-                        df_raw = df_raw.loc[:, ~df_raw.columns.duplicated(keep='first')]
-                    if time_col not in df_raw.columns:
-                        print(f"Attenzione: la colonna del tempo '{time_col}' non è presente nemmeno dopo la re-lettura di {path}. Skip questo file.")
-                        return pd.DataFrame()
-                # Conversione della colonna del tempo in datetime
-                df_raw[time_col] = pd.to_datetime(df_raw[time_col],
-                                                  format="%d/%m/%Y %H:%M:%S",
-                                                  dayfirst=True,
-                                                  errors="coerce")
-                # Imposta la colonna del tempo come indice (ma la mantiene anche come colonna)
-                df_raw.set_index(time_col, drop=False, inplace=True)
-                df_raw.sort_index(ascending=True, inplace=True)
-                df_raw = df_raw[~df_raw.index.duplicated(keep='first')]
-            else:
-                if "Timestamp" in df_raw.columns:
-                    df_raw["Timestamp"] = pd.to_datetime(df_raw["Timestamp"],
-                                                         format="%d/%m/%Y %H:%M:%S",
-                                                         dayfirst=True,
-                                                         errors="coerce")
-                    df_raw.set_index("Timestamp", drop=False, inplace=True)
-                    df_raw.sort_index(ascending=True, inplace=True)
-                    df_raw = df_raw[~df_raw.index.duplicated(keep='first')]
-            
-            # Estrazione delle colonne di interesse
-            if columns_of_interest:
-                # Costruisci la lista delle colonne da estrarre: includi sempre quella del tempo e tutte le altre specificate
-                cols_to_extract = [columns_of_interest["time"]] + [col for key, col in columns_of_interest.items() if key != "time"]
-                df_clean = df_raw.copy()[cols_to_extract]
-                # Rinomina la colonna del tempo in "time"
-                df_clean.rename(columns={columns_of_interest["time"]: "time"}, inplace=True)
-                
-                # Definisci la colonna "essenziale" per il drop delle righe con valori mancanti.
-                if ANALYSIS_MODE.lower() == "diagnostic":
-                    essential = columns_of_interest.get("dose_rate", "dose_rate")
+            df_raw = pd.read_csv(path, sep=",", encoding=encoding,
+                                 decimal=",", engine="python")
+            if df_raw.shape[1] == 1:
+                raise ValueError("probabile separatore ';'")
+        except Exception:
+            try:
+                df_raw = pd.read_csv(path, sep=";", encoding=encoding,
+                                     decimal=",", engine="python")
+            except Exception as e:
+                print(f"Errore lettura '{path}': {e}")
+                return pd.DataFrame()
+
+        # ---------- 2. Pulizia nomi-colonna ----------
+        df_raw.columns = df_raw.columns.str.strip()
+        if ANALYSIS_MODE.lower() == "diagnostic":
+            df_raw.columns = df_raw.columns.str.lower()
+
+        if df_raw.columns.duplicated().any():
+            df_raw = df_raw.loc[:, ~df_raw.columns.duplicated(keep="first")]
+
+        # ---------- 3. Gestione colonna TIME ----------
+        if columns_of_interest and "time" in columns_of_interest:
+            time_col =self._first_present(df_raw.columns, columns_of_interest["time"])
+            if not time_col:
+                print(f"[Warn] nessuna colonna time in {path}")
+                return pd.DataFrame()
+
+            df_raw[time_col] = pd.to_datetime(df_raw[time_col],
+                                              format="%d/%m/%Y %H:%M:%S",
+                                              dayfirst=True, errors="coerce")
+            df_raw.set_index(time_col, drop=False, inplace=True)
+            df_raw.sort_index(inplace=True)
+            df_raw = df_raw[~df_raw.index.duplicated(keep="first")]
+        elif "Timestamp" in df_raw.columns:
+            df_raw["Timestamp"] = pd.to_datetime(df_raw["Timestamp"],
+                                                 format="%d/%m/%Y %H:%M:%S",
+                                                 dayfirst=True, errors="coerce")
+            df_raw.set_index("Timestamp", drop=False, inplace=True)
+            df_raw.sort_index(inplace=True)
+
+        # ---------- 4. Estrazione colonne interessanti ----------
+        if columns_of_interest:
+            extracted = {}
+            for key, aliases in columns_of_interest.items():
+                col =self._first_present(df_raw.columns, aliases)
+                if col:
+                    extracted[key] = df_raw[col]
                 else:
-                    # Per terapia, ad esempio, usa "intensity"
-                    essential = columns_of_interest.get("intensity", "Intensità di dose (μSv/h)")
-                
-                if essential in df_clean.columns:
-                    df_clean.dropna(subset=[essential], inplace=True)
-                return df_clean
-            else:
-                df_raw.dropna(how="any", inplace=True)
-                return df_raw
-    
-        except Exception as e:
-            print(f"Errore durante il caricamento di {path}: {e}")
-            return pd.DataFrame()
+                    print(f"[Warn] colonna '{key}' non trovata – alias {aliases}")
+
+            df_clean = pd.DataFrame(extracted)
+
+            # rinomina il tempo a “time” se presente
+            if "time" in df_clean.columns:
+                df_clean.rename(columns={"time": "time"}, inplace=True)
+
+            # ---------- 5. Drop NaN sulla colonna essenziale ----------
+            if ANALYSIS_MODE.lower() == "diagnostic":
+                essential_alias = columns_of_interest.get("dose_rate", ["dose_rate"])
+            else:  # therapy
+                essential_alias = columns_of_interest.get("intensity",
+                                                          ["Intensità di dose (μSv/h)"])
+            ess_col = self._first_present(df_clean.columns, essential_alias)
+            if ess_col:
+                df_clean.dropna(subset=[ess_col], inplace=True)
+
+            return df_clean
+
+        # Se non si chiede estrazione specifica: drop generico dei NaN
+        df_raw.dropna(how="any", inplace=True)
+        return df_raw
         
     #3__       
     def synchronize_data(self, df_inj: pd.DataFrame, df_con: pd.DataFrame, base_name: str):
