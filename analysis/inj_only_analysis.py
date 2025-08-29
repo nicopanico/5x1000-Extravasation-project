@@ -31,10 +31,10 @@ class InjectionOnlyAnalysis(BaseAnalysis):
 
     # nessuna sincro con controlaterale
     def synchronize_and_align(self, df_inj, df_con, base_name):
+        # allinea solo sull’injection; usa una copia come “dummy” controlaterale
         dm = self.data_manager
-        # allinea solo sull’injection
-        dummy_con = df_inj.copy()
-        return dm.align_with_injection_reference(df_inj, dummy_con, total_minutes=15)[0], pd.DataFrame()
+        inj_aligned, _ = dm.align_with_injection_reference(df_inj, df_inj, total_minutes=15)
+        return inj_aligned, inj_aligned.copy()
 
     def analyze_peak(self, df_inj, _df_con_not_used):
         if df_inj.empty:
@@ -67,7 +67,8 @@ class InjectionOnlyAnalysis(BaseAnalysis):
             "ratio_dose": float((peak_val - mean_pl_inj) / peak_val) if peak_val else np.nan,
         }
         stats = compute_additional_metrics(df_inj_f, stats, time_column=tcol, dose_column=col)
-        return df_inj_f, pd.DataFrame(), stats
+        dummy_con_f = df_inj_f.copy()
+        return df_inj_f, dummy_con_f, stats
 
     def plot_results(self, base_name, df_inj, _df_con, df_inj_filtered, _df_con_filtered):
         # plot 1 solo dosimetro (riuso plot_manager ma passiamo la stessa curva su 2 tracce)
