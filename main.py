@@ -8,6 +8,7 @@ Created on Fri Jan 17 11:54:38 2025
 
 # main.py
 import argparse
+from analysis.inj_only_analysis import InjectionOnlyAnalysis
 from config import ANALYSIS_MODE, ROOT_INJECTIONS_THERAPY, ROOT_CONTROLATERALS_THERAPY, \
                    ROOT_INJECTIONS_DIAGNOSTIC, ROOT_CONTROLATERALS_DIAGNOSTIC, \
                    PATH_GRAFICI_THERAPY, PATH_GRAFICI_DIAGNOSTIC
@@ -27,11 +28,16 @@ def main():
         root_controlateral = ROOT_CONTROLATERALS_THERAPY
         output_dir = PATH_GRAFICI_THERAPY
         analysis_class = TherapyAnalysis
-    else:
+    elif args.mode == "diagnostic":
         root_injection = ROOT_INJECTIONS_DIAGNOSTIC
         root_controlateral = ROOT_CONTROLATERALS_DIAGNOSTIC
         output_dir = PATH_GRAFICI_DIAGNOSTIC
         analysis_class = DiagnosticAnalysis
+    else:
+        root_injection = ROOT_INJECTIONS_DIAGNOSTIC
+        root_controlateral = ROOT_CONTROLATERALS_DIAGNOSTIC  # non usato
+        output_dir = PATH_GRAFICI_DIAGNOSTIC
+        analysis_class = InjectionOnlyAnalysis
 
     # Istanzia il DataManager con i path appropriati
     data_manager = DataManager(root_injection=root_injection, root_controlateral=root_controlateral)
