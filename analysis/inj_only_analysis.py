@@ -68,20 +68,40 @@ class InjectionOnlyAnalysis(BaseAnalysis):
         }
         stats = compute_additional_metrics(df_inj_f, stats, time_column=tcol, dose_column=col)
         dummy_con_f = df_inj_f.copy()
+        self.last_stats = stats
         return df_inj_f, dummy_con_f, stats
+        
+
 
     def plot_results(self, base_name, df_inj, _df_con, df_inj_filtered, _df_con_filtered):
-        # plot 1 solo dosimetro (riuso plot_manager ma passiamo la stessa curva su 2 tracce)
-        from plot_manager import plot_injection_controlateral
-        from config import PATH_GRAFICI_DIAGNOSTIC
+        from plot_manager import plot_single_injection, plot_single_injection_normalized
+        from config import PATH_GRAFICI_DIAGNOSTIC, INJ_ONLY_COMMON_YLIM, INJ_ONLY_PLOT_NORMALIZED, \
+                           INJ_ONLY_SUBDIR_PLOT, INJ_ONLY_SUBDIR_NORM
 
-        dummy = df_inj_filtered[[c for c in df_inj_filtered.columns]] .copy()
-        plot_injection_controlateral(
+        stats = getattr(self, "last_stats", None)
+
+        # 1) Grafico assoluto (log) con eventuale scala comune
+        plot_single_injection(
             base_name=f"{base_name}_injonly",
-            df_inj=df_inj_filtered,
-            df_con=dummy,  # tratteggiata uguale (solo per comodità visiva)
-            output_dir=PATH_GRAFICI_DIAGNOSTIC,
+            df=df_inj_filtered,
+            output_dir_base=PATH_GRAFICI_DIAGNOSTIC,
             yscale="log",
             dose_column="dose_rate",
             time_column="time_seconds",
+            stats=stats,
+            common_ylim=INJ_ONLY_COMMON_YLIM,
+            y_label="Dose rate [µSv/h]",
+            subdir_name=INJ_ONLY_SUBDIR_PLOT
         )
+
+        # 2) Grafico normalizzato (0–1), in cartella dedicata
+        if INJ_ONLY_PLOT_NORMALIZED:
+            plot_single_injection_normalized(
+                base_name=f"{base_name}_injonly",
+                df=df_inj_filtered,
+                output_dir_base=PATH_GRAFICI_DIAGNOSTIC,
+                dose_column="dose_rate",
+                time_column="time_seconds",
+                stats=stats,
+                subdir_name=INJ_ONLY_SUBDIR_NORM
+            )

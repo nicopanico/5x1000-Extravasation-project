@@ -113,3 +113,113 @@ def plot_comparison_raw_filtered(
     os.makedirs(output_dir, exist_ok=True)
     plt.savefig(os.path.join(output_dir, f"plot_{base_name}_comparison_raw_filtered.png"))
     plt.close(fig)
+
+def _ensure_dir(path):
+    os.makedirs(path, exist_ok=True)
+    return path
+
+def plot_single_injection(
+    base_name,
+    df,
+    output_dir_base,
+    yscale="log",
+    dose_column="dose_rate",
+    time_column="time_seconds",
+    stats=None,
+    common_ylim=None,      # (ymin, ymax) oppure None
+    y_label=None,          # etichetta asse Y con unità
+    subdir_name="plot",    # cartella di salvataggio
+):
+    out_dir = _ensure_dir(os.path.join(output_dir_base, subdir_name))
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(df[time_column], df[dose_column], label="Injection", linewidth=2)
+
+    ax.set_yscale(yscale)
+    if common_ylim is not None:
+        ax.set_ylim(*common_ylim)
+
+    # Etichette assi (con unità)
+    ax.set_xlabel("Time [s]", fontsize=14)
+    if y_label is None:
+        # default sensato per inj_only diagnostica
+        y_label = "Dose rate [µSv/h]" if dose_column == "dose_rate" else dose_column
+    ax.set_ylabel(y_label, fontsize=14)
+
+    ax.set_title(f"Injection only – {base_name}", fontsize=16)
+    ax.grid(True, which="both", alpha=0.3)
+    ax.legend()
+
+    # Annotazioni utili
+    if stats:
+        pk_t  = stats.get("peak_inj_time_s")
+        pk_v  = stats.get("peak_inj_value")
+        pl_v  = stats.get("mean_plateau_inj")
+        rd    = stats.get("ratio_dose")
+
+        if pk_t is not None and pk_v is not None:
+            ax.axvline(pk_t, linestyle="--", alpha=0.6)
+            ax.scatter([pk_t], [pk_v], marker="x")
+            ax.text(pk_t, pk_v, f" peak={pk_v:.1f}", va="bottom", ha="left", fontsize=9)
+
+        if pl_v is not None:
+            ax.axhline(pl_v, linestyle=":", alpha=0.6)
+            ax.text(0.02, 0.92, f"plateau≈{pl_v:.1f}", transform=ax.transAxes, fontsize=10)
+        if rd is not None:
+            ax.text(0.02, 0.86, f"ratio_dose={rd:.2f}", transform=ax.transAxes, fontsize=10)
+
+    out_path = os.path.join(out_dir, f"plot_{base_name}.png")
+    plt.savefig(out_path, bbox_inches="tight")
+    plt.close(fig)
+    print(f"Plot salvato in: {out_path}")
+
+
+def plot_single_injection_normalized(
+    base_name,
+    df,
+    output_dir_base,
+    dose_column="dose_rate",
+    time_column="time_seconds",
+    stats=None,
+    subdir_name="normalized_plot",
+):
+    """
+    Curva normalizzata al picco (y = dose/peak). Scala lineare [0,1.05].
+    - Stravaso grave: plateau/peak ~ 1  (curva alta)
+    - Normale: plateau/peak << 1        (curva bassa)
+    """
+    out_dir = _ensure_dir(os.path.join(output_dir_base, subdir_name))
+    if df.empty:
+        return
+
+    peak = float(np.nanmax(df[dose_column].values))
+    if not np.isfinite(peak) or peak <= 0:
+        return
+
+    y = df[dose_column].values / peak
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(df[time_column].values, y, label="Injection / peak", linewidth=2)
+
+    ax.set_ylim(0, 1.05)   # scala comune
+    ax.set_xlabel("Time [s]", fontsize=14)
+    ax.set_ylabel("Normalized dose rate [1]", fontsize=14)
+    ax.set_title(f"Injection only (normalized) – {base_name}", fontsize=16)
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+
+    # Annotazione plateau/peak e ratio_dose
+    if stats:
+        pl_v  = stats.get("mean_plateau_inj")
+        rd    = stats.get("ratio_dose")
+        if pl_v is not None and np.isfinite(peak):
+            pl_ratio = pl_v / peak
+            ax.axhline(pl_ratio, linestyle=":", alpha=0.6)
+            ax.text(0.02, 0.92, f"plateau/peak={pl_ratio:.2f}", transform=ax.transAxes, fontsize=10)
+        if rd is not None:
+            ax.text(0.02, 0.86, f"ratio_dose={rd:.2f}", transform=ax.transAxes, fontsize=10)
+
+    out_path = os.path.join(out_dir, f"plot_{base_name}_normalized.png")
+    plt.savefig(out_path, bbox_inches="tight")
+    plt.close(fig)
+    print(f"Plot salvato in: {out_path}")
