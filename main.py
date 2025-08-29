@@ -17,10 +17,10 @@ from analysis.therapy_analysis import TherapyAnalysis
 from analysis.diagnostic_analysis import DiagnosticAnalysis
 
 def main():
-    parser = argparse.ArgumentParser(description="Analisi dei dati: Terapia o Diagnostica")
+    parser = argparse.ArgumentParser(description="Analisi dei dati: Terapia, Diagnostica o Solo Injection")
     parser.add_argument(
         "--mode",
-        choices=["therapy", "diagnostic", "inj_only"],  # <— aggiungi
+        choices=["therapy", "diagnostic", "inj_only"],
         default=ANALYSIS_MODE,
         help="Modalità di analisi: 'therapy', 'diagnostic' o 'inj_only'"
     )
@@ -37,7 +37,7 @@ def main():
         root_controlateral = ROOT_CONTROLATERALS_DIAGNOSTIC
         output_dir = PATH_GRAFICI_DIAGNOSTIC
         analysis_class = DiagnosticAnalysis
-    else:
+    elif args.mode == "inj_only":
         root_injection = ROOT_INJECTIONS_DIAGNOSTIC
         root_controlateral = ROOT_CONTROLATERALS_DIAGNOSTIC  # non usato
         output_dir = PATH_GRAFICI_DIAGNOSTIC
@@ -45,10 +45,10 @@ def main():
 
     # Istanzia il DataManager con i path appropriati
     data_manager = DataManager(root_injection=root_injection, root_controlateral=root_controlateral)
-    
+
     # Istanzia l'analisi
     analysis = analysis_class(data_manager, output_dir)
-    
+
     # Esegui l'analisi
     analysis.run_analysis()
 
