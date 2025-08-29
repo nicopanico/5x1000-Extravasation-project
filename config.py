@@ -55,6 +55,14 @@ COLUMNS_CONTROLATERAL_DIAGNOSTIC = {
 }
 
 # Modalità di analisi: "therapy" o "diagnostic"
-ANALYSIS_MODE = "OnlyInjections"  # Cambia in "therapy" se desideri analizzare i dati di Terapia
+ANALYSIS_MODE = "inj_only"  # Cambia in "therapy" se desideri analizzare i dati di Terapia
+# ANALYSIS_MODE = "therapy"
+# ANALYSIS_MODE = "diagnostic"
+# ANALYSIS_MODE = "inj_only"  # Solo dosimetro injection, senza controlaterale
 
-
+# --- Plot inj_only ---
+# Se None: autoscale log. Se tuple: limiti fissi condivisi per il grafico assoluto.
+INJ_ONLY_COMMON_YLIM = (10, 5000)        # es. (10, 1000) se vuoi fissare la scala
+INJ_ONLY_PLOT_NORMALIZED = True    # salva anche il grafico normalizzato
+INJ_ONLY_SUBDIR_PLOT = "plot"
+INJ_ONLY_SUBDIR_NORM = "normalized_plot"
