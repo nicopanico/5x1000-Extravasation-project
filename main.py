@@ -18,8 +18,12 @@ from analysis.diagnostic_analysis import DiagnosticAnalysis
 
 def main():
     parser = argparse.ArgumentParser(description="Analisi dei dati: Terapia o Diagnostica")
-    parser.add_argument("--mode", choices=["therapy", "diagnostic"], default=ANALYSIS_MODE,
-                        help="Modalità di analisi: 'therapy' (default) o 'diagnostic'")
+    parser.add_argument(
+        "--mode",
+        choices=["therapy", "diagnostic", "inj_only"],  # <— aggiungi
+        default=ANALYSIS_MODE,
+        help="Modalità di analisi: 'therapy', 'diagnostic' o 'inj_only'"
+    )
     args = parser.parse_args()
 
     # Seleziona i path e i parametri in base alla modalità

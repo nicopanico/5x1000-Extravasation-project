@@ -31,21 +31,22 @@ class DataManager:
               un file "D223512_2025_03_21_cont.csv" in controlaterals,
           allora genera un id = "D223512_2025_03_21".
         """
+        from config import ANALYSIS_MODE
+        mode = ANALYSIS_MODE.lower()
 
         # Trova i file di injection che finiscono con _inj.csv
         inj_files = [f for f in os.listdir(self.root_injection) if f.endswith('_inj.csv')]
-        # Trova i file di controlaterals che finiscono con _cont.csv
+
+        if mode == "inj_only":
+            # "ABC_2025_07_29_inj.csv" -> "ABC_2025_07_29"
+            return sorted({f[:-8] for f in inj_files})  # rimuove "_inj.csv"
+
+        # Modalità classiche: richiedi anche il controlaterale
         con_files = [f for f in os.listdir(self.root_controlateral) if f.endswith('_cont.csv')]
-
-        # Estrai i nomi base togliendo il suffisso '_inj.csv' o '_cont.csv'
-        inj_bases = set(f.replace('_inj.csv', '') for f in inj_files)
-        con_bases = set(f.replace('_cont.csv', '') for f in con_files)
-
-        # Intersezione dei nomi base
-        common_bases = inj_bases.intersection(con_bases)
-
-        return sorted(list(common_bases))
-        
+        inj_bases = {f[:-8] for f in inj_files}   # rimuove "_inj.csv"
+        con_bases = {f[:-9] for f in con_files}   # rimuove "_cont.csv"
+        return sorted(inj_bases.intersection(con_bases))
+    
     @staticmethod
     def _first_present(df_cols, aliases):
         """
@@ -88,7 +89,8 @@ class DataManager:
 
         # ---------- 2. Pulizia nomi-colonna ----------
         df_raw.columns = df_raw.columns.str.strip()
-        if ANALYSIS_MODE.lower() == "diagnostic":
+        mode = ANALYSIS_MODE.lower()
+        if mode in ("diagnostic", "inj_only"):
             df_raw.columns = df_raw.columns.str.lower()
 
         if df_raw.columns.duplicated().any():
@@ -131,7 +133,8 @@ class DataManager:
                 df_clean.rename(columns={"time": "time"}, inplace=True)
 
             # ---------- 5. Drop NaN sulla colonna essenziale ----------
-            if ANALYSIS_MODE.lower() == "diagnostic":
+            mode = ANALYSIS_MODE.lower()
+            if mode in ("diagnostic", "inj_only"):
                 essential_alias = columns_of_interest.get("dose_rate", ["dose_rate"])
             else:  # therapy
                 essential_alias = columns_of_interest.get("intensity",
@@ -234,4 +237,6 @@ class DataManager:
     
         return df_inj_aligned, df_con_aligned
     
-    
+    def get_file_names_inj_only(self):
+        inj_files = [f for f in os.listdir(self.root_injection) if f.endswith('_inj.csv')]
+        return sorted({f.replace('_inj.csv', '') for f in inj_files})
