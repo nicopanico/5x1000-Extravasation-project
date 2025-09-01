@@ -31,7 +31,7 @@ class InjectionOnlyAnalysis(BaseAnalysis):
 
     # nessuna sincro con controlaterale
     def synchronize_and_align(self, df_inj, df_con, base_name):
-        # allinea solo sull’injection; usa una copia come “dummy” controlaterale
+        # Allinea solo sull’injection; usa una copia come “dummy” controlaterale
         dm = self.data_manager
         inj_aligned, _ = dm.align_with_injection_reference(df_inj, df_inj, total_minutes=15)
         return inj_aligned, inj_aligned.copy()
