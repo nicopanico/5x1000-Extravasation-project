@@ -1,18 +1,13 @@
 # inj_only_analysis.py
 from analysis.base_analysis import BaseAnalysis
-from peak_analysis import analyze_peak   # usa il filtro gaussiano
-from additional_metrics import compute_additional_metrics
-import numpy as np
 import pandas as pd
-
-MIN_ABS_PEAK = 1.0  # µSv/h, come diagnostica
 
 class InjectionOnlyAnalysis(BaseAnalysis):
     """
-    Analisi con un solo dosimetro (injection). Usa le stesse euristiche della diagnostica
-    per start/peak/plateau, ma ignora il controlaterale.
-    Colonne attese: time ('timestamp' alias) e dose_rate.
-    Output: Stats (peak, plateau, delta_dose, ratio_dose, area_after_peak, slope_rising).
+    Analisi con un solo dosimetro (injection). Applica esattamente la logica
+    diagnostica (start/peak/plateau) riusando la funzione condivisa in
+    diagnostic_analysis. Restituisce un 'dummy' controlaterale per compatibilità
+    con la pipeline base.
     """
 
     # mappature colonne: riuso alias diagnostica
@@ -20,7 +15,7 @@ class InjectionOnlyAnalysis(BaseAnalysis):
         from config import COLUMNS_INJECTION_DIAGNOSTIC
         return COLUMNS_INJECTION_DIAGNOSTIC
 
-    # per compatibilità con BaseAnalysis, ma non verrà usato
+    # per compatibilità con BaseAnalysis (non usato in inj_only)
     def get_controlateral_columns(self):
         return {"time": ["timestamp", "Timestamp"], "dose_rate": ["dose_rate"]}
 
@@ -29,58 +24,51 @@ class InjectionOnlyAnalysis(BaseAnalysis):
         df_inj = self.data_manager.load_and_clean_data(inj_path, self.get_injection_columns())
         return df_inj, pd.DataFrame()
 
-    # nessuna sincro con controlaterale
+    # nessuna sincro con controlaterale: allinea su injection e duplica come dummy
     def synchronize_and_align(self, df_inj, df_con, base_name):
-        # Allinea solo sull’injection; usa una copia come “dummy” controlaterale
         dm = self.data_manager
         inj_aligned, _ = dm.align_with_injection_reference(df_inj, df_inj, total_minutes=15)
         return inj_aligned, inj_aligned.copy()
 
     def analyze_peak(self, df_inj, _df_con_not_used):
+        """
+        Analisi injection-only con la STESSA logica della diagnostica:
+        - start su slope, picco ≤120 s
+        - finestra fino a peak_time + WINDOW_AFTER_PEAK_S
+        - plateau: derivata < 2 %·peak/s per ≥ 30 s
+        """
+        from analysis.diagnostic_analysis import analyze_injection_like_diagnostic
+
         if df_inj.empty:
-            return df_inj, pd.DataFrame(), {}
-        # filtro + picco (riuso funzione generica ma passeremo solo df_inj)
-        df_inj_f = df_inj.copy()
-        # colonna e tempo
-        col, tcol = "dose_rate", "time_seconds"
-
-        # semplice smoothing leggero
-        from scipy.ndimage import gaussian_filter1d
-        df_inj_f[col] = gaussian_filter1d(df_inj_f[col].values, sigma=3.0)
-
-        peak_idx = df_inj_f[col].idxmax()
-        peak_val = df_inj_f.loc[peak_idx, col]
-        peak_time = df_inj_f.loc[peak_idx, tcol]
-        if peak_val < MIN_ABS_PEAK:
-            print("Curve a fondo – inj only – skip")
             return pd.DataFrame(), pd.DataFrame(), {}
 
-        # stima plateau: media in coda (ultimi 30 s) oppure derivata < 2%·peak/s per ≥30 s
-        tail = df_inj_f.iloc[-30:] if len(df_inj_f) >= 30 else df_inj_f
-        mean_pl_inj = float(tail[col].mean())
+        df_inj_f, stats, _meta = analyze_injection_like_diagnostic(
+            df_inj, dose_col="dose_rate", time_col="time_seconds"
+        )
+        if df_inj_f.empty:
+            print("Curve a fondo – inj_only – skip")
+            return pd.DataFrame(), pd.DataFrame(), {}
 
-        stats = {
-            "peak_inj_time_s": float(peak_time),
-            "peak_inj_value": float(peak_val),
-            "mean_plateau_inj": mean_pl_inj,
-            "delta_dose": float(peak_val - mean_pl_inj),
-            "ratio_dose": float((peak_val - mean_pl_inj) / peak_val) if peak_val else np.nan,
-        }
-        stats = compute_additional_metrics(df_inj_f, stats, time_column=tcol, dose_column=col)
-        dummy_con_f = df_inj_f.copy()
         self.last_stats = stats
-        return df_inj_f, dummy_con_f, stats
-        
-
+        # ritorna un dummy 'con' non vuoto per compatibilità con BaseAnalysis
+        return df_inj_f, df_inj_f.copy(), stats
 
     def plot_results(self, base_name, df_inj, _df_con, df_inj_filtered, _df_con_filtered):
         from plot_manager import plot_single_injection, plot_single_injection_normalized
-        from config import PATH_GRAFICI_DIAGNOSTIC, INJ_ONLY_COMMON_YLIM, INJ_ONLY_PLOT_NORMALIZED, \
-                           INJ_ONLY_SUBDIR_PLOT, INJ_ONLY_SUBDIR_NORM
+        from config import PATH_GRAFICI_DIAGNOSTIC
+        # fallback sicuro se alcune costanti non sono in config.py
+        try:
+            import config as cfg
+            common_ylim = getattr(cfg, "INJ_ONLY_COMMON_YLIM", None)
+            make_norm   = getattr(cfg, "INJ_ONLY_PLOT_NORMALIZED", True)
+            sub_plot    = getattr(cfg, "INJ_ONLY_SUBDIR_PLOT", "plot")
+            sub_norm    = getattr(cfg, "INJ_ONLY_SUBDIR_NORM", "normalized_plot")
+        except Exception:
+            common_ylim, make_norm, sub_plot, sub_norm = None, True, "plot", "normalized_plot"
 
         stats = getattr(self, "last_stats", None)
 
-        # 1) Grafico assoluto (log) con eventuale scala comune
+        # 1) Grafico assoluto (log) con unità e sottocartella dedicata
         plot_single_injection(
             base_name=f"{base_name}_injonly",
             df=df_inj_filtered,
@@ -89,13 +77,13 @@ class InjectionOnlyAnalysis(BaseAnalysis):
             dose_column="dose_rate",
             time_column="time_seconds",
             stats=stats,
-            common_ylim=INJ_ONLY_COMMON_YLIM,
+            common_ylim=common_ylim,
             y_label="Dose rate [µSv/h]",
-            subdir_name=INJ_ONLY_SUBDIR_PLOT
+            subdir_name=sub_plot
         )
 
-        # 2) Grafico normalizzato (0–1), in cartella dedicata
-        if INJ_ONLY_PLOT_NORMALIZED:
+        # 2) Grafico normalizzato (0–1) in sottocartella dedicata
+        if make_norm:
             plot_single_injection_normalized(
                 base_name=f"{base_name}_injonly",
                 df=df_inj_filtered,
@@ -103,5 +91,5 @@ class InjectionOnlyAnalysis(BaseAnalysis):
                 dose_column="dose_rate",
                 time_column="time_seconds",
                 stats=stats,
-                subdir_name=INJ_ONLY_SUBDIR_NORM
+                subdir_name=sub_norm
             )
