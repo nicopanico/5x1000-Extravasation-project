@@ -49,3 +49,40 @@ def agreement_injonly_vs_diag(df_inj, df_diag, outdir, key="base_name"):
     plt.grid(alpha=0.3)
     plt.savefig(os.path.join(outdir,"agreement_ratio_dose.png"), bbox_inches="tight"); plt.close()
     return r, m
+
+def curves_pr_roc(df, outdir, use_model_score=False):
+    from sklearn.metrics import precision_recall_curve, average_precision_score, roc_curve, auc
+    os.makedirs(outdir, exist_ok=True)
+    y = df["severe"].astype(int).values
+    score = df["score"].values if use_model_score else (1.0 - df["ratio_dose"].clip(0,1).values)
+
+    # PR
+    p, r, thr = precision_recall_curve(y, score)
+    ap = average_precision_score(y, score)
+    plt.figure(figsize=(6,5)); plt.plot(r, p); plt.xlabel("Recall"); plt.ylabel("Precision")
+    plt.title(f"PR curve (AP={ap:.3f})"); plt.grid(alpha=0.3)
+    plt.savefig(os.path.join(outdir,"pr_curve.png"), bbox_inches="tight"); plt.close()
+
+    # ROC
+    fpr, tpr, thr2 = roc_curve(y, score)
+    roc_auc = auc(fpr, tpr)
+    plt.figure(figsize=(6,5)); plt.plot(fpr, tpr); plt.plot([0,1],[0,1],"k--")
+    plt.xlabel("FPR"); plt.ylabel("TPR"); plt.title(f"ROC (AUC={roc_auc:.3f})"); plt.grid(alpha=0.3)
+    plt.savefig(os.path.join(outdir,"roc_curve.png"), bbox_inches="tight"); plt.close()
+
+def confusion_at_threshold(df, thr, outdir, use_model_score=False):
+    from sklearn.metrics import confusion_matrix
+    os.makedirs(outdir, exist_ok=True)
+    y = df["severe"].astype(int).values
+    score = df["score"].values if use_model_score else (1.0 - df["ratio_dose"].clip(0,1).values)
+    yhat = (score >= thr).astype(int)
+    cm = confusion_matrix(y, yhat, labels=[0,1])  # [[TN,FP],[FN,TP]]
+    tn, fp, fn, tp = cm.ravel()
+    plt.figure(figsize=(4,4))
+    plt.imshow(cm, cmap="Blues"); plt.xticks([0,1],["Pred 0","Pred 1"]); plt.yticks([0,1],["True 0","True 1"])
+    for i,(r) in enumerate(cm):
+        for j,v in enumerate(r):
+            plt.text(j,i,str(v), ha="center", va="center")
+    plt.title(f"Confusion (thr={thr:.2f})"); plt.colorbar()
+    plt.savefig(os.path.join(outdir,"confusion.png"), bbox_inches="tight"); plt.close()
+    return dict(tn=int(tn), fp=int(fp), fn=int(fn), tp=int(tp))

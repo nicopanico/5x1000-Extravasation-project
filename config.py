@@ -45,10 +45,22 @@ COLUMNS_CONTROLATERAL_THERAPY = {
 
 # Colonne di interesse per la diagnostica
 COLUMNS_INJECTION_DIAGNOSTIC = {
-    "time"      : ["timestamp", "Timestamp", "Date / Time", "record time"],
-    "dose_rate" : ["dose_rate", "Dose Rate", "Intensità di dose (μSv/h)",
-                   "DR_Max", "C1_Max"]      # metti qui tutti gli alias plausibili
+    "time": [],
+    "dose_rate": []
 }
+
+COLUMNS_INJECTION_DIAGNOSTIC["time"] = list({
+    *COLUMNS_INJECTION_DIAGNOSTIC.get("time", []),
+    "timestamp", "time", "date time", "date/time", "datetime", "data/ora", "record time"
+})
+
+COLUMNS_INJECTION_DIAGNOSTIC["dose_rate"] = list({
+    *COLUMNS_INJECTION_DIAGNOSTIC.get("dose_rate", []),
+    "dose_rate", "dose rate",
+    "intensità di dose (usv/h)", "intensita di dose (usv/h)",
+    "intensità di dose (uSv/h)".lower(),   # se vuoi coprire casi strani
+    "dr_max", "c1_max"
+})
 COLUMNS_CONTROLATERAL_DIAGNOSTIC = {
     "time"      : ["timestamp", "Timestamp"],
     "dose_rate" : ["dose_rate", "Dose Rate", "Intensità di dose (μSv/h)"]
