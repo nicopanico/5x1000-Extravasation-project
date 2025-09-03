@@ -59,7 +59,7 @@ COLUMNS_INJECTION_DIAGNOSTIC["dose_rate"] = list({
     "dose_rate", "dose rate",
     "intensità di dose (usv/h)", "intensita di dose (usv/h)",
     "intensità di dose (uSv/h)".lower(),   # se vuoi coprire casi strani
-    "dr_max", "c1_max"
+    
 })
 COLUMNS_CONTROLATERAL_DIAGNOSTIC = {
     "time"      : ["timestamp", "Timestamp"],
